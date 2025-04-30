@@ -10,10 +10,12 @@ SOURCES = \
 	$(SYNTAXER).tab.c \
 	$(LEXER).yy.c
 
+SOURCES := $(addprefix $(OUT)/, $(SOURCES))
+
 all: $(OUT)/compiler
 	./$?
 
-$(OUT)/compiler: $(addprefix $(OUT)/, $(SOURCES))
+$(OUT)/compiler: $(SOURCES)
 	gcc -lfl -o $@ $^ $(INCLUDES)
 
 $(OUT):
@@ -23,4 +25,4 @@ $(OUT)/$(LEXER).yy.c: $(LEXER).l $(OUT)
 	flex -o $@ $(LEXER).l
 
 $(OUT)/$(SYNTAXER).tab.%: $(SYNTAXER).y $(OUT)
-	bison -d -o $@ $(SYNTAXER).y
+	bison -d -o $@ $(SYNTAXER).y -Wcounterexamples -Werror
