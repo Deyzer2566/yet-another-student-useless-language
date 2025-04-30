@@ -24,5 +24,5 @@ $(OUT):
 $(OUT)/$(LEXER).yy.c: $(LEXER).l $(OUT)
 	flex -o $@ $(LEXER).l
 
-$(OUT)/$(SYNTAXER).tab.%: $(SYNTAXER).y $(OUT)
-	bison -d -o $@ $(SYNTAXER).y -Wcounterexamples -Werror
+$(OUT)/$(SYNTAXER).tab.c: $(SYNTAXER).y $(OUT)
+	bison -d -o $@ -Wcounterexamples -Werror $(SYNTAXER).y
