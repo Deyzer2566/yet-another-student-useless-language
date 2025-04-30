@@ -12,17 +12,22 @@ SOURCES = \
 
 SOURCES := $(addprefix $(OUT)/, $(SOURCES))
 
+OBJECTS = $(SOURCES:.c=.o)
+
 all: $(OUT)/compiler
 	./$?
 
-$(OUT)/compiler: $(SOURCES)
-	gcc -lfl -o $@ $^ $(INCLUDES)
+$(OUT)/compiler: $(OBJECTS)
+	gcc -lfl -o $@ $^
 
-$(OUT):
-	mkdir $(OUT)
+%.o: %.c
+	mkdir -p $(dir $@)
+	gcc -c -o $@ $? $(INCLUDES)
 
-$(OUT)/$(LEXER).yy.c: $(LEXER).l $(OUT)
+$(OUT)/$(LEXER).yy.c: $(LEXER).l
+	mkdir -p $(dir $@)
 	flex -o $@ $(LEXER).l
 
-$(OUT)/$(SYNTAXER).tab.c: $(SYNTAXER).y $(OUT)
+$(OUT)/$(SYNTAXER).tab.c: $(SYNTAXER).y
+	mkdir -p $(dir $@)
 	bison -d -o $@ -Wcounterexamples -Werror $(SYNTAXER).y
