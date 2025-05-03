@@ -1,18 +1,20 @@
 %{
 #include <stdio.h>
 #include <string.h>
+#include "ast.h"
+#include "ast_list.h"
 %}
 
 %token NUMBER
 %token LBRACKET RBRACKET
 %token EOL 
 %token ADD MUL SUB DIV
+%token INT REAL STRING
 
 %token IDENT
 %union {
-    int i;
-    float f;
-    char *str;
+    struct ast_node *node;
+    struct ast_node_list *lst;
 }
 
 %type <str> IDENT
@@ -23,19 +25,16 @@
 %{ 
 #include <stdbool.h>
 #include <stdlib.h>
-struct list_header_t {
-    struct list_header_t *next;
-};
 
 struct idents_list_t {
     struct list_header_t list_header;
     const char *key;
-    YYSTYPE value;
+    struct ast_node *value;
 };
 
 struct idents_list_t *ident = NULL;
 
-void update_ident(const char* key, YYSTYPE value) {
+void update_ident(const char* key, struct ast_node *value) {
     struct idents_list_t *cur = ident;
     while(cur != NULL) {
         if(strcmp(cur->key, key) == 0) {
@@ -60,7 +59,7 @@ void update_ident(const char* key, YYSTYPE value) {
 }
 
 struct yystype_or_err {
-    YYSTYPE ret_value;
+    struct ast_node *ret_value;
     bool valid;
 };
 
@@ -76,43 +75,52 @@ struct yystype_or_err get_ident(const char* key) {
 }
 %}
 
+%{
+    struct ast_node_list *root;
+%}
+
 %%
 
-stmt_list:
-	| stmt_list stmt EOL
+root:
+    stmt_list { root = $<lst>1; }
+    ;
+
+stmt_list: { $<lst>$ = NULL; }
+	| stmt EOL stmt_list {
+            struct ast_node_list *element = malloc(sizeof(struct ast_node_list));
+            element->next = (struct list_header_t *)$<lst>3;
+            element->node = $<node>1;
+            $<lst>$ = element;
+        }
 	;
 
 stmt:
-	| expr { printf("=%d\n", $<i>1); }
-	| IDENT ASSIGN expr { printf("%s now is %d\n", $<str>1, $<i>3); update_ident($<str>1, (YYSTYPE)$<i>3);}
+	expr
 	;
 
 expr
-	: expr ADD term { $<i>$ = $<i>1 + $<i>3; }
-	| expr SUB term { $<i>$ = $<i>1 - $<i>3; }
+	: expr ADD term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = PLUS_OP, .left = $<node>1, .right = $<node>3 }}); }
+	| expr SUB term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MINUS_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | IDENT ASSIGN factor { $<node>$ = $<node>3; update_ident($<node>1->value.str, $<node>3); }
 	| term
 	;
 
+parenthesized_expr:
+    expr
+    ;
+
 term
-	: term MUL factor { $<i>$ = $<i>1 * $<i>3; }
-	| term DIV factor { $<i>$ = $<i>1 / $<i>3; }
+	: term MUL factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MULTIPLICATION_OP, .left = $<node>1, .right = $<node>3 }}); }
+	| term DIV factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = DIVISION_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| factor
 	;
 
 factor
-	: LBRACKET expr RBRACKET { $<i>$ = $<i>2; }
+	: LBRACKET parenthesized_expr RBRACKET { $<node>$ = $<node>2; }
 	| NUMBER
-	| IDENT { struct yystype_or_err ret_value = get_ident($<str>1); if(ret_value.valid) { $<i>$ = ret_value.ret_value.i; } else { fprintf(stderr, "Ошибка доступа к идентификатору %s", $<str>1); exit(1);} }
+	| IDENT {
+            $<node>$ = new_node(IDENT_T, (union value_t){.str = $<node>1->value.str });
+        }
 	;
 
 %%
-
-void yyerror(const char *str)
-{
-		fprintf(stderr,"ошибка: %s\n",str);
-} 
-  
-int main()
-{
-		yyparse();
-}

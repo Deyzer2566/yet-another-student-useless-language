@@ -8,11 +8,11 @@ INCLUDES := ${addprefix -I,$(INCLUDES)}
 
 SOURCES = \
 	$(SYNTAXER).tab.c \
-	$(LEXER).yy.c
+	$(LEXER).yy.c \
+	ast.c \
+	main.c
 
-SOURCES := $(addprefix $(OUT)/, $(SOURCES))
-
-OBJECTS = $(SOURCES:.c=.o)
+OBJECTS = $(addprefix $(OUT)/, $(SOURCES:.c=.o))
 
 all: $(OUT)/compiler
 	./$?
@@ -21,6 +21,10 @@ $(OUT)/compiler: $(OBJECTS)
 	gcc -lfl -o $@ $^
 
 %.o: %.c
+	mkdir -p $(dir $@)
+	gcc -c -o $@ $? $(INCLUDES)
+
+$(OUT)/%.o: %.c
 	mkdir -p $(dir $@)
 	gcc -c -o $@ $? $(INCLUDES)
 

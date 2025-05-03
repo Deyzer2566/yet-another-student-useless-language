@@ -1,10 +1,11 @@
 %{
 #include <stdio.h>
 #include "syntaxer.tab.h"
+#include "ast.h"
 %}
 
 %%
-[0-9]+					{ yylval.i = atoi(yytext); return NUMBER; }
+[0-9]+					{ int val = atoi(yytext); yylval.node = new_node(INTEGER_T, (union value_t){.i = val}); return NUMBER; }
 "("						return LBRACKET;
 ")"						return RBRACKET;
 "+"						return ADD;
@@ -12,6 +13,9 @@
 \n						return EOL;
 "-"						return SUB;
 "/"						return DIV;
-[a-zA-Z_]\w*            { yylval.str = malloc(strlen(yytext)); memcpy(yylval.str, yytext, strlen(yytext)); return IDENT; }
+[a-zA-Z_]\w*            { char *str = malloc(strlen(yytext)); memcpy(str, yytext, strlen(yytext)); yylval.node = new_node(STRING_T, (union value_t){.str = str}); return IDENT; }
 "="                     return ASSIGN;
+"int"                   return INT;
+"real"                  return REAL;
+"string"                return STRING;
 %%
