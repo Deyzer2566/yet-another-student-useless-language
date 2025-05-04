@@ -13,7 +13,7 @@
 \n						return EOL;
 "-"						return SUB;
 "/"						return DIV;
-[a-zA-Z_]\w*            { char *str = malloc(strlen(yytext)); memcpy(str, yytext, strlen(yytext)); yylval.node = new_node(STRING_T, (union value_t){.str = str}); return IDENT; }
+[a-zA-Z_]\w*            { char *str = malloc(strlen(yytext)); memcpy(str, yytext, strlen(yytext)); yylval.node = new_node(IDENT_T, (union value_t){.str = str}); return IDENT; }
 "="                     return ASSIGN;
 "int"                   return INT;
 "real"                  return REAL;
