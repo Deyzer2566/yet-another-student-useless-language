@@ -13,6 +13,7 @@
 %token IDENT
 %union {
     struct ast_node *node;
+    enum type_t *type;
 }
 
 %type <str> IDENT
@@ -104,8 +105,14 @@ factor
     | MINUS factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = NEGATION_OP, .left = $<node>2, .right = NULL }}); }
     | LOGICAL_NOT factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LOGICAL_NOT_OP, .left = $<node>2, .right = NULL }}); }
     | BITWISE_NOT factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_NOT_OP, .left = $<node>2, .right = NULL }}); }
+    | LBRACKET typename RBRACKET factor { $<node>$ = new_node(CAST_T, (union value_t){.cast = {.cast_type = $<type>2, .fact = $<node>4 }}); }
 	;
 
+typename
+    : INT
+    | REAL
+    | STRING
+    ;
 
 expr_list
     : expr PARAM_DELIMITER expr_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }

@@ -35,6 +35,9 @@ void free_node(struct ast_node *node) {
         free_node(node->value.for_loop.limit);
         free_node(node->value.for_loop.step);
         free_node(node->value.for_loop.stmt);
+    } else if(node->type == CAST_T) {
+        free_node(node->value.cast.fact);
+        free(node->value.cast.cast_type);
     }
     free(node);
 }

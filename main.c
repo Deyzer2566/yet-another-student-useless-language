@@ -7,6 +7,26 @@ int yyerror(const char *str)
 }
 
 void draw_ast_tree(struct ast_node *node, int offset);
+void draw_type(enum type_t *type, int offset) {
+    for(int i = 0;i<offset-1;i++) {
+        printf(" ");
+    }
+    printf("|");
+    switch(*type) {
+    case INTEGER_T:
+        printf("int\n");
+        break;
+    case REAL_T:
+        printf("real\n");
+        break;
+    case STRING_T:
+        printf("string\n");
+        break;
+    default:
+        printf("unexpected type\n");
+        break;
+    }
+}
 
 void draw_ast_tree(struct ast_node *node, int offset) {
     for(int i = 0;i<offset-1;i++) {
@@ -121,6 +141,11 @@ void draw_ast_tree(struct ast_node *node, int offset) {
         draw_ast_tree(node->value.for_loop.limit, offset+1);
         draw_ast_tree(node->value.for_loop.step, offset+1);
         draw_ast_tree(node->value.for_loop.stmt, offset+1);
+        break;
+    case CAST_T:
+        printf("->(cast)\n");
+        draw_type(node->value.cast.cast_type, offset+1);
+        draw_ast_tree(node->value.cast.fact, offset+1);
         break;
     default:
         printf("unimplemented ast node type\n");

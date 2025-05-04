@@ -14,7 +14,8 @@ enum type_t {
     FUNCTION_CALL_T,
     BRANCH_T,
     WHILE_T,
-    FOR_T
+    FOR_T,
+    CAST_T
 };
 struct expression_t {
     enum operation_t{
@@ -68,6 +69,10 @@ union value_t {
         struct ast_node *step;
         struct ast_node *stmt;
     } for_loop;
+    struct {
+        enum type_t *cast_type;
+        struct ast_node *fact;
+    } cast;
 };
 struct ast_node {
     enum type_t type;

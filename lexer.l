@@ -25,9 +25,9 @@
 "|"                     return BITWISE_OR;
 "~"                     return BITWISE_NOT;
 "^"                     return XOR;
-"int"                   return INT;
-"real"                  return REAL;
-"string"                return STRING;
+"int"                   { yylval.type = malloc(sizeof(enum type_t)); *yylval.type = INTEGER_T; return INT; }
+"real"                  { yylval.type = malloc(sizeof(enum type_t)); *yylval.type = REAL_T; return REAL; }
+"string"                { yylval.type = malloc(sizeof(enum type_t)); *yylval.type = STRING_T; return STRING; }
 "if"                    return IF;
 "else"                  return ELSE;
 "{"                     return LBRACE;
