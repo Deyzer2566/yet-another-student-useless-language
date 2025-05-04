@@ -21,59 +21,6 @@
 
 %token ASSIGN
 
-%{ 
-#include <stdbool.h>
-#include <stdlib.h>
-
-struct idents_list_t {
-    struct list_header_t list_header;
-    const char *key;
-    struct ast_node *value;
-};
-
-struct idents_list_t *ident = NULL;
-
-void update_ident(const char* key, struct ast_node *value) {
-    struct idents_list_t *cur = ident;
-    while(cur != NULL) {
-        if(strcmp(cur->key, key) == 0) {
-            cur->value = value;
-            return;
-        }
-        if(cur->list_header.next == NULL)
-            break;
-        else 
-            cur = (struct idents_list_t*)cur->list_header.next;
-    }
-    if(cur == NULL) {
-        cur = malloc(sizeof(struct idents_list_t));
-		ident = cur;
-    } else {
-        cur->list_header.next = malloc(sizeof(struct idents_list_t));
-        cur = (struct idents_list_t*)cur->list_header.next;
-    }
-    cur->key = key;
-    cur->value = value;
-	cur->list_header.next = NULL;
-}
-
-struct yystype_or_err {
-    struct ast_node *ret_value;
-    bool valid;
-};
-
-struct yystype_or_err get_ident(const char* key) {
-    struct idents_list_t *cur = ident;
-    while(cur != NULL) {
-        if(strcmp(cur->key, key) == 0) {
-            return (struct yystype_or_err){.valid = true, .ret_value = cur->value};
-        }
-        cur = (struct idents_list_t*)cur->list_header.next;
-    }
-    return (struct yystype_or_err){.valid = false};
-}
-%}
-
 %{
     struct ast_node *root;
 %}
@@ -100,7 +47,7 @@ stmt:
 	;
 
 assign_or_expr
-    : IDENT ASSIGN expr { $<node>$ = $<node>3; update_ident($<node>1->value.str, $<node>3); }
+    : IDENT ASSIGN assign_or_expr { $<node>$ = $<node>3; }
     | expr
     ;
 
