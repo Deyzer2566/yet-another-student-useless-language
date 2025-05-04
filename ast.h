@@ -22,7 +22,20 @@ struct expression_t {
         MINUS_OP,
         MULTIPLICATION_OP,
         DIVISION_OP,
-        ASSIGN_OP
+        ASSIGN_OP,
+        EQ_OP,
+        LARGER_OP,
+        LARGER_OR_EQ_OP,
+        SMALLER_OP,
+        SMALLER_OR_EQ_OP,
+        LOGICAL_AND_OP,
+        LOGICAL_OR_OP,
+        LOGICAL_NOT_OP,
+        BITWISE_AND_OP,
+        BITWISE_OR_OP,
+        BITWISE_NOT_OP,
+        NEGATION_OP,
+        XOR_OP
     } operation;
     struct ast_node *left;
     struct ast_node *right;

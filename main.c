@@ -47,6 +47,45 @@ void draw_ast_tree(struct ast_node *node, int offset) {
         case ASSIGN_OP:
             printf("=\n");
             break;
+        case EQ_OP:
+            printf("==\n");
+            break;
+        case LARGER_OP:
+            printf(">\n");
+            break;
+        case LARGER_OR_EQ_OP:
+            printf(">=\n");
+            break;
+        case SMALLER_OP:
+            printf("<\n");
+            break;
+        case SMALLER_OR_EQ_OP:
+            printf("<=\n");
+            break;
+        case LOGICAL_AND_OP:
+            printf("&&\n");
+            break;
+        case LOGICAL_OR_OP:
+            printf("||\n");
+            break;
+        case LOGICAL_NOT_OP:
+            printf("!\n");
+            break;
+        case BITWISE_AND_OP:
+            printf("&\n");
+            break;
+        case BITWISE_OR_OP:
+            printf("|\n");
+            break;
+        case BITWISE_NOT_OP:
+            printf("~\n");
+            break;
+        case NEGATION_OP:
+            printf("-\n");
+            break;
+        case XOR_OP:
+            printf("^\n");
+            break;
         default:
             printf("unimplemnted operation\n");
             break;

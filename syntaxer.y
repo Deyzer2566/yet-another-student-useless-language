@@ -7,7 +7,7 @@
 
 %token NUMBER
 %token LBRACKET RBRACKET
-%token ADD MUL SUB DIV
+%token ADD MUL MINUS DIV
 %token INT REAL STRING
 
 %token IDENT
@@ -34,6 +34,11 @@
 %token WHILE
 
 %token FOR
+
+%token EQ LARGER LARGER_OR_EQ SMALLER SMALLER_OR_EQ
+%token LOGICAL_AND LOGICAL_OR LOGICAL_NOT
+%token BITWISE_AND BITWISE_OR BITWISE_NOT
+%token NEGATION XOR
 
 %%
 
@@ -65,9 +70,16 @@ assign_or_expr
 
 expr
 	: expr ADD term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = PLUS_OP, .left = $<node>1, .right = $<node>3 }}); }
-	| expr SUB term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MINUS_OP, .left = $<node>1, .right = $<node>3 }}); }
+	| expr MINUS term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MINUS_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | expr LOGICAL_OR term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LOGICAL_OR_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | expr BITWISE_OR term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_OR_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| term
     | function_call
+    | expr EQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = EQ_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | expr LARGER term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LARGER_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | expr LARGER_OR_EQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LARGER_OR_EQ_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | expr SMALLER term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = SMALLER_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | expr SMALLER_OR_EQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = SMALLER_OR_EQ_OP, .left = $<node>1, .right = $<node>3 }}); }
 	;
 
 parenthesized_expr:
@@ -77,6 +89,9 @@ parenthesized_expr:
 term
 	: term MUL factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MULTIPLICATION_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| term DIV factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = DIVISION_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | term LOGICAL_AND factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LOGICAL_AND_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | term BITWISE_AND factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_AND_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | term XOR factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = XOR_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| factor
 	;
 
@@ -86,6 +101,9 @@ factor
 	| IDENT {
             $<node>$ = new_node(IDENT_T, (union value_t){.str = $<node>1->value.str });
         }
+    | MINUS factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = NEGATION_OP, .left = $<node>2, .right = NULL }}); }
+    | LOGICAL_NOT factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LOGICAL_NOT_OP, .left = $<node>2, .right = NULL }}); }
+    | BITWISE_NOT factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_NOT_OP, .left = $<node>2, .right = NULL }}); }
 	;
 
 
