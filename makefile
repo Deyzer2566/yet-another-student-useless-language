@@ -12,21 +12,26 @@ SOURCES = \
 	ast.c \
 	main.c
 
+HEADERS = \
+	list.h \
+	ast.h \
+	ast_list.h
+
 OBJECTS = $(addprefix $(OUT)/, $(SOURCES:.c=.o))
 
 all: $(OUT)/compiler
-	./$?
+	./$<
 
 $(OUT)/compiler: $(OBJECTS)
 	gcc -lfl -o $@ $^
 
-%.o: %.c
+%.o: %.c $(HEADERS)
 	mkdir -p $(dir $@)
-	gcc -c -o $@ $? $(INCLUDES)
+	gcc -c -o $@ $< $(INCLUDES)
 
-$(OUT)/%.o: %.c
+$(OUT)/%.o: %.c $(HEADERS)
 	mkdir -p $(dir $@)
-	gcc -c -o $@ $? $(INCLUDES)
+	gcc -c -o $@ $< $(INCLUDES)
 
 $(OUT)/$(LEXER).yy.c: $(LEXER).l
 	mkdir -p $(dir $@)

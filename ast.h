@@ -11,7 +11,8 @@ enum type_t {
     STRING_T,
     IDENT_T,
     AST_LIST_ELEMENT_T,
-    FUNCTION_CALL_T
+    FUNCTION_CALL_T,
+    BRANCH_T
 };
 struct expression_t {
     enum operation_t{
@@ -37,6 +38,11 @@ union value_t {
         struct ast_node *function_name;
         struct ast_node *param;
     } function_call;
+    struct {
+        struct ast_node *expression;
+        struct ast_node *then_stmt;
+        struct ast_node *else_stmt;
+    } branch;
 };
 struct ast_node {
     enum type_t type;

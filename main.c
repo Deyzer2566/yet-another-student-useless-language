@@ -65,6 +65,12 @@ void draw_ast_tree(struct ast_node *node, int offset) {
         printf("->(function)%s\n", node->value.function_call.function_name->value.str);
         draw_ast_tree(node->value.function_call.param, offset+1);
         break;
+    case BRANCH_T:
+        printf("->(if)\n");
+        draw_ast_tree(node->value.branch.expression, offset+1);
+        draw_ast_tree(node->value.branch.then_stmt, offset+1);
+        draw_ast_tree(node->value.branch.else_stmt, offset+1);
+        break;
     default:
         printf("unimplemented ast node type\n");
         break;

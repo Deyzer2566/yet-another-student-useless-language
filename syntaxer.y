@@ -27,19 +27,29 @@
 %token FUNCTION_PARAM_DELIMITER
 %token STATEMENT_DELIMITER
 
+%token IF ELSE
+
+%token LBRACE RBRACE
+
 %%
 
 root:
     stmt_list { root = $<node>1; }
     ;
 
+stmt_block
+    : LBRACE stmt_list RBRACE { $<node>$ = $<node>2; }
+    ;
+
 stmt_list
     : { $<node>$ = NULL; }
 	| stmt STATEMENT_DELIMITER stmt_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
+    | stmt { $<node>$ = new_ast_list_element($<node>1, NULL); }
 	;
 
 stmt:
 	assign_or_expr
+    | branch
 	;
 
 assign_or_expr
@@ -74,13 +84,18 @@ factor
 	;
 
 
- expr_list
+expr_list
     : expr FUNCTION_PARAM_DELIMITER expr_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
     | expr { $<node>$ = new_ast_list_element($<node>1, NULL); }
     ;
 
 function_call
     : IDENT LBRACKET expr_list RBRACKET { $<node>$ = new_node(FUNCTION_CALL_T, (union value_t){.function_call = {.function_name = $<node>1, .param = $<node>3}}); }
+    ;
+
+branch
+    : IF LBRACKET assign_or_expr RBRACKET stmt_block { $<node>$ = new_node(BRANCH_T, (union value_t){.branch = {.expression = $<node>3, .then_stmt=$<node>5}}); }
+    | IF LBRACKET assign_or_expr RBRACKET stmt_block ELSE stmt_block { $<node>$ = new_node(BRANCH_T, (union value_t){.branch = {.expression = $<node>3, .then_stmt=$<node>5, .else_stmt=$<node>7}}); }
     ;
 
 %%

@@ -23,6 +23,10 @@ void free_node(struct ast_node *node) {
         free(node->value.str);
     } else if(node->type == STRING_T) {
         free(node->value.str);
+    } else if(node->type == BRANCH_T) {
+        free_node(node->value.branch.expression);
+        free_node(node->value.branch.then_stmt);
+        free_node(node->value.branch.else_stmt);
     }
     free(node);
 }
