@@ -27,6 +27,14 @@ void free_node(struct ast_node *node) {
         free_node(node->value.branch.expression);
         free_node(node->value.branch.then_stmt);
         free_node(node->value.branch.else_stmt);
+    } else if(node->type == WHILE_T) {
+        free_node(node->value.while_loop.expression);
+        free_node(node->value.while_loop.stmt);
+    } else if(node->type == FOR_T) {
+        free_node(node->value.for_loop.init);
+        free_node(node->value.for_loop.limit);
+        free_node(node->value.for_loop.step);
+        free_node(node->value.for_loop.stmt);
     }
     free(node);
 }

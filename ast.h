@@ -12,7 +12,9 @@ enum type_t {
     IDENT_T,
     AST_LIST_ELEMENT_T,
     FUNCTION_CALL_T,
-    BRANCH_T
+    BRANCH_T,
+    WHILE_T,
+    FOR_T
 };
 struct expression_t {
     enum operation_t{
@@ -43,6 +45,16 @@ union value_t {
         struct ast_node *then_stmt;
         struct ast_node *else_stmt;
     } branch;
+    struct {
+        struct ast_node *expression;
+        struct ast_node *stmt;
+    } while_loop;
+    struct {
+        struct ast_node *init;
+        struct ast_node *limit;
+        struct ast_node *step;
+        struct ast_node *stmt;
+    } for_loop;
 };
 struct ast_node {
     enum type_t type;

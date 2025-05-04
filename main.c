@@ -71,6 +71,18 @@ void draw_ast_tree(struct ast_node *node, int offset) {
         draw_ast_tree(node->value.branch.then_stmt, offset+1);
         draw_ast_tree(node->value.branch.else_stmt, offset+1);
         break;
+    case WHILE_T:
+        printf("->(while)\n");
+        draw_ast_tree(node->value.while_loop.expression, offset+1);
+        draw_ast_tree(node->value.while_loop.stmt, offset+1);
+        break;
+    case FOR_T:
+        printf("->(for)\n");
+        draw_ast_tree(node->value.for_loop.init, offset+1);
+        draw_ast_tree(node->value.for_loop.limit, offset+1);
+        draw_ast_tree(node->value.for_loop.step, offset+1);
+        draw_ast_tree(node->value.for_loop.stmt, offset+1);
+        break;
     default:
         printf("unimplemented ast node type\n");
         break;

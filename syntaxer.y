@@ -24,12 +24,16 @@
     struct ast_node *root;
 %}
 
-%token FUNCTION_PARAM_DELIMITER
+%token PARAM_DELIMITER
 %token STATEMENT_DELIMITER
 
 %token IF ELSE
 
 %token LBRACE RBRACE
+
+%token WHILE
+
+%token FOR
 
 %%
 
@@ -50,6 +54,7 @@ stmt_list
 stmt:
 	assign_or_expr
     | branch
+    | loop
 	;
 
 assign_or_expr
@@ -85,7 +90,7 @@ factor
 
 
 expr_list
-    : expr FUNCTION_PARAM_DELIMITER expr_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
+    : expr PARAM_DELIMITER expr_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
     | expr { $<node>$ = new_ast_list_element($<node>1, NULL); }
     ;
 
@@ -96,6 +101,26 @@ function_call
 branch
     : IF LBRACKET assign_or_expr RBRACKET stmt_block { $<node>$ = new_node(BRANCH_T, (union value_t){.branch = {.expression = $<node>3, .then_stmt=$<node>5}}); }
     | IF LBRACKET assign_or_expr RBRACKET stmt_block ELSE stmt_block { $<node>$ = new_node(BRANCH_T, (union value_t){.branch = {.expression = $<node>3, .then_stmt=$<node>5, .else_stmt=$<node>7}}); }
+    ;
+
+loop
+    : while_loop
+    | for_loop
+    ;
+
+while_loop
+    : WHILE LBRACKET assign_or_expr RBRACKET stmt_block { $<node>$ = new_node(WHILE_T, (union value_t){.while_loop = {.expression = $<node>3, .stmt=$<node>5}}); }
+    ;
+
+assing_expr_or_nil
+    : { $<node>$ = NULL; }
+    | assign_or_expr
+    ;
+
+for_loop
+    : FOR LBRACKET assing_expr_or_nil PARAM_DELIMITER assing_expr_or_nil PARAM_DELIMITER assing_expr_or_nil RBRACKET stmt_block { 
+            $<node>$ = new_node(FOR_T, (union value_t){.for_loop = {.init = $<node>3, .limit=$<node>5, .step = $<node>7, .stmt = $<node>9}}); 
+        }
     ;
 
 %%
