@@ -39,6 +39,12 @@ void draw_ast_tree(struct ast_node *node, int offset) {
         case DIVISION_OP:
             printf("/\n");
             break;
+        case ASSIGN_OP:
+            printf("=\n");
+            break;
+        default:
+            printf("unimplemnted operation\n");
+            break;
         }
         draw_ast_tree(node->value.expression.left, offset+1);
         draw_ast_tree(node->value.expression.right, offset+1);
@@ -49,7 +55,7 @@ void draw_ast_tree(struct ast_node *node, int offset) {
             draw_ast_tree(cur->value.ast_list_element.node, offset+1);
         break;
     default:
-        printf("unimplemented");
+        printf("unimplemented ast node type");
         break;
     }
     printf("\n");

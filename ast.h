@@ -17,7 +17,8 @@ struct expression_t {
         PLUS_OP,
         MINUS_OP,
         MULTIPLICATION_OP,
-        DIVISION_OP
+        DIVISION_OP,
+        ASSIGN_OP
     } operation;
     struct ast_node *left;
     struct ast_node *right;
