@@ -14,7 +14,6 @@
 %token IDENT
 %union {
     struct ast_node *node;
-    struct ast_node_list *lst;
 }
 
 %type <str> IDENT
@@ -76,32 +75,39 @@ struct yystype_or_err get_ident(const char* key) {
 %}
 
 %{
-    struct ast_node_list *root;
+    struct ast_node *root;
 %}
 
 %%
 
 root:
-    stmt_list { root = $<lst>1; }
+    stmt_list { root = $<node>1; }
     ;
 
-stmt_list: { $<lst>$ = NULL; }
+stmt_list
+    : { $<node>$ = NULL; }
 	| stmt EOL stmt_list {
-            struct ast_node_list *element = malloc(sizeof(struct ast_node_list));
-            element->next = (struct list_header_t *)$<lst>3;
-            element->node = $<node>1;
-            $<lst>$ = element;
+            struct ast_node *element = malloc(sizeof(struct ast_node));
+            element->type = AST_LIST_ELEMENT_T;
+            element->value.ast_list_element.next = $<node>3;
+            element->value.ast_list_element.node = $<node>1;
+            $<node>$ = element;
         }
 	;
 
 stmt:
-	expr
+	assign_or_expr
 	;
+
+assign_or_expr
+    : IDENT ASSIGN expr { $<node>$ = $<node>3; update_ident($<node>1->value.str, $<node>3); }
+    | expr
+    ;
+
 
 expr
 	: expr ADD term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = PLUS_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| expr SUB term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MINUS_OP, .left = $<node>1, .right = $<node>3 }}); }
-    | IDENT ASSIGN factor { $<node>$ = $<node>3; update_ident($<node>1->value.str, $<node>3); }
 	| term
 	;
 

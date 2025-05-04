@@ -16,6 +16,13 @@ void free_node(struct ast_node *node) {
             free(node->value.expression.left);
         if(node->value.expression.right != NULL)
             free(node->value.expression.right);
+    } else if(node->type == AST_LIST_ELEMENT_T) {
+        for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next)
+            free_node(cur->value.ast_list_element.node);
+    } else if(node->type == IDENT_T) {
+        free(node->value.str);
+    } else if(node->type == STRING_T) {
+        free(node->value.str);
     }
     free(node);
 }
