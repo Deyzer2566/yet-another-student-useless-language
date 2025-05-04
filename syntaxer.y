@@ -7,7 +7,6 @@
 
 %token NUMBER
 %token LBRACKET RBRACKET
-%token EOL 
 %token ADD MUL SUB DIV
 %token INT REAL STRING
 
@@ -25,6 +24,9 @@
     struct ast_node *root;
 %}
 
+%token FUNCTION_PARAM_DELIMITER
+%token STATEMENT_DELIMITER
+
 %%
 
 root:
@@ -33,13 +35,7 @@ root:
 
 stmt_list
     : { $<node>$ = NULL; }
-	| stmt EOL stmt_list {
-            struct ast_node *element = malloc(sizeof(struct ast_node));
-            element->type = AST_LIST_ELEMENT_T;
-            element->value.ast_list_element.next = $<node>3;
-            element->value.ast_list_element.node = $<node>1;
-            $<node>$ = element;
-        }
+	| stmt STATEMENT_DELIMITER stmt_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
 	;
 
 stmt:
@@ -56,6 +52,7 @@ expr
 	: expr ADD term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = PLUS_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| expr SUB term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MINUS_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| term
+    | function_call
 	;
 
 parenthesized_expr:
@@ -75,5 +72,15 @@ factor
             $<node>$ = new_node(IDENT_T, (union value_t){.str = $<node>1->value.str });
         }
 	;
+
+
+ expr_list
+    : expr FUNCTION_PARAM_DELIMITER expr_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
+    | expr { $<node>$ = new_ast_list_element($<node>1, NULL); }
+    ;
+
+function_call
+    : IDENT LBRACKET expr_list RBRACKET { $<node>$ = new_node(FUNCTION_CALL_T, (union value_t){.function_call = {.function_name = $<node>1, .param = $<node>3}}); }
+    ;
 
 %%

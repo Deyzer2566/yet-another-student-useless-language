@@ -26,3 +26,10 @@ void free_node(struct ast_node *node) {
     }
     free(node);
 }
+
+struct ast_node *new_ast_list_element(struct ast_node *node, struct ast_node *next) {
+    return new_node(AST_LIST_ELEMENT_T, (union value_t){
+        .ast_list_element.node = node,
+        .ast_list_element.next = next
+    });
+}

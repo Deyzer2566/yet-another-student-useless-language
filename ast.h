@@ -10,7 +10,8 @@ enum type_t {
     REAL_T,
     STRING_T,
     IDENT_T,
-    AST_LIST_ELEMENT_T
+    AST_LIST_ELEMENT_T,
+    FUNCTION_CALL_T
 };
 struct expression_t {
     enum operation_t{
@@ -32,6 +33,10 @@ union value_t {
         struct ast_node *next;
         struct ast_node *node;
     } ast_list_element;
+    struct {
+        struct ast_node *function_name;
+        struct ast_node *param;
+    } function_call;
 };
 struct ast_node {
     enum type_t type;
@@ -39,3 +44,9 @@ struct ast_node {
 };
 struct ast_node *new_node(enum type_t type, union value_t value);
 void free_node(struct ast_node *node);
+/*
+ * Создает элемент списка узлов
+ * node - ast-узел не указатель на создаваемый массив
+ * next - ast-узел с типом AST_LIST_ELEMENT_T
+ */
+struct ast_node *new_ast_list_element(struct ast_node *node, struct ast_node *next);
