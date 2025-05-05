@@ -57,13 +57,16 @@ stmt_block
 
 stmt_list
     : { $<node>$ = NULL; }
-	| stmt STATEMENT_DELIMITER stmt_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
-    | stmt { $<node>$ = new_ast_list_element($<node>1, NULL); }
+	| splitable_stmt STATEMENT_DELIMITER stmt_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
+    | unsplitable_stmt stmt_list { $<node>$ = new_ast_list_element($<node>1, $<node>2); }
 	;
 
-stmt:
-	assign_or_expr
-    | branch
+splitable_stmt
+    : assign_or_expr
+    ;
+
+unsplitable_stmt
+	: branch
     | loop
 	;
 

@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include "out/syntaxer.tab.h"
 #include "ast.h"
+extern int yylineno;
 int yyerror(const char *str)
 {
-    fprintf(stderr,"ошибка: %s\n",str);
+    fprintf(stderr,"ошибка: %s на %d строке\n",str,yylineno);
 }
 
 void draw_ast_tree(struct ast_node *node, int offset);

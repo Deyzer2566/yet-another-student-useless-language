@@ -5,6 +5,8 @@
 %}
 
 %x STR
+%option yylineno
+
 
 %%
 [0-9]+					{ int val = atoi(yytext); yylval.node = new_node(INTEGER_T, (union value_t){.i = val}); return NUMBER; }
@@ -13,7 +15,7 @@
 ")"						return RBRACKET;
 "+"						return ADD;
 "*"						return MUL;
-\n                      return STATEMENT_DELIMITER;
+";"                     return STATEMENT_DELIMITER;
 "-"						return MINUS;
 "/"						return DIV;
 "=="                    return EQ;
@@ -48,4 +50,5 @@
 <STR>\\\\               { char *str = malloc(strlen(yylval.str) + 1+1); str[0] = 0; strcpy(str, yylval.str); strcat(str, "\\"); free(yylval.str); yylval.str = str; }
 <STR>[^\\\"]*           { char *str = malloc(strlen(yylval.str) + strlen(yytext)+1); str[0] = 0; strcpy(str, yylval.str); strcat(str, yytext); free(yylval.str); yylval.str = str; }
 <STR>\"                 { yylval.node = new_node(STRING_T, (union value_t){.str = yylval.str}); BEGIN(INITIAL); return STRING; }
+[ \t\n]                     
 %%
