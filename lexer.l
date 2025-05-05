@@ -8,6 +8,7 @@
 
 %%
 [0-9]+					{ int val = atoi(yytext); yylval.node = new_node(INTEGER_T, (union value_t){.i = val}); return NUMBER; }
+[0-9]+\.[0-9]*          { float val = atof(yytext); yylval.node = new_node(REAL_T, (union value_t){.f = val}); return REAL; }
 "("						return LBRACKET;
 ")"						return RBRACKET;
 "+"						return ADD;

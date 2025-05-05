@@ -41,6 +41,8 @@
 
 %token STRING;
 
+%token REAL;
+
 %%
 
 root:
@@ -107,6 +109,7 @@ factor
     | BITWISE_NOT factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_NOT_OP, .left = $<node>2, .right = NULL }}); }
     | LBRACKET typename RBRACKET factor { $<node>$ = new_node(CAST_T, (union value_t){.cast = {.cast_type = $<type>2, .fact = $<node>4 }}); }
     | STRING
+    | REAL
 	;
 
 typename
