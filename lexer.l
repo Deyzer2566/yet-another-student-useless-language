@@ -5,6 +5,7 @@
 %}
 
 %x STR
+%x MULTILINE_COMMENT
 %option yylineno
 
 
@@ -51,4 +52,9 @@
 <STR>[^\\\"]*           { char *str = malloc(strlen(yylval.str) + strlen(yytext)+1); str[0] = 0; strcpy(str, yylval.str); strcat(str, yytext); free(yylval.str); yylval.str = str; }
 <STR>\"                 { yylval.node = new_node(STRING_T, (union value_t){.str = yylval.str}); BEGIN(INITIAL); return STRING; }
 [ \t\n]                     
+\/\*                    BEGIN(MULTILINE_COMMENT);
+<MULTILINE_COMMENT>[^\*]
+<MULTILINE_COMMENT>\*[^\/]
+<MULTILINE_COMMENT>\*\/ BEGIN(INITIAL);
+\/\/[^\n]*
 %%
