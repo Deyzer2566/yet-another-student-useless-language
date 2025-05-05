@@ -8,16 +8,18 @@
 %token NUMBER
 %token LBRACKET RBRACKET
 %token ADD MUL MINUS DIV
-%token INT REAL STRING
+%token TYPE_INT TYPE_REAL TYPE_STRING
 
 %token IDENT
 %union {
     struct ast_node *node;
     enum type_t *type;
+    char *str;
 }
 
 %type <str> IDENT
 %type <i> NUMBER
+%type <str> STRING;
 
 %token ASSIGN
 
@@ -40,6 +42,8 @@
 %token LOGICAL_AND LOGICAL_OR LOGICAL_NOT
 %token BITWISE_AND BITWISE_OR BITWISE_NOT
 %token NEGATION XOR
+
+%token STRING;
 
 %%
 
@@ -106,12 +110,13 @@ factor
     | LOGICAL_NOT factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LOGICAL_NOT_OP, .left = $<node>2, .right = NULL }}); }
     | BITWISE_NOT factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_NOT_OP, .left = $<node>2, .right = NULL }}); }
     | LBRACKET typename RBRACKET factor { $<node>$ = new_node(CAST_T, (union value_t){.cast = {.cast_type = $<type>2, .fact = $<node>4 }}); }
+    | STRING
 	;
 
 typename
-    : INT
-    | REAL
-    | STRING
+    : TYPE_INT
+    | TYPE_REAL
+    | TYPE_STRING
     ;
 
 expr_list
