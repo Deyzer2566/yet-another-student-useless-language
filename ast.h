@@ -36,7 +36,8 @@ struct expression_t {
         BITWISE_OR_OP,
         BITWISE_NOT_OP,
         NEGATION_OP,
-        XOR_OP
+        XOR_OP,
+        NEQ_OP
     } operation;
     struct ast_node *left;
     struct ast_node *right;

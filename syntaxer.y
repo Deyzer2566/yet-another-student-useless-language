@@ -39,9 +39,11 @@
 %token BITWISE_AND BITWISE_OR BITWISE_NOT
 %token NEGATION XOR
 
-%token STRING;
+%token STRING
 
-%token REAL;
+%token REAL
+
+%token NEQ
 
 %%
 
@@ -79,6 +81,7 @@ expr
 	| term
     | function_call
     | expr EQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = EQ_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | expr NEQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = NEQ_OP, .left = $<node>1, .right = $<node>3 }}); }
     | expr LARGER term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LARGER_OP, .left = $<node>1, .right = $<node>3 }}); }
     | expr LARGER_OR_EQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LARGER_OR_EQ_OP, .left = $<node>1, .right = $<node>3 }}); }
     | expr SMALLER term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = SMALLER_OP, .left = $<node>1, .right = $<node>3 }}); }

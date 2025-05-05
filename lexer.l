@@ -17,6 +17,7 @@
 "-"						return MINUS;
 "/"						return DIV;
 "=="                    return EQ;
+"!="                    return NEQ;
 ">"                     return LARGER;
 ">="                    return LARGER_OR_EQ;
 "<"                     return SMALLER;

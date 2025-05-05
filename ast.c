@@ -38,6 +38,9 @@ void free_node(struct ast_node *node) {
     } else if(node->type == CAST_T) {
         free_node(node->value.cast.fact);
         free(node->value.cast.cast_type);
+    } else if(node->type == FUNCTION_CALL_T) {
+        free_node(node->value.function_call.function_name);
+        free_node(node->value.function_call.param);
     }
     free(node);
 }
