@@ -32,6 +32,7 @@
 "|"                     return BITWISE_OR;
 "~"                     return BITWISE_NOT;
 "^"                     return XOR;
+"%"                     return MOD;
 "int"                   { yylval.type = malloc(sizeof(enum type_t)); *yylval.type = INTEGER_T; return TYPE_INT; }
 "real"                  { yylval.type = malloc(sizeof(enum type_t)); *yylval.type = REAL_T; return TYPE_REAL; }
 "string"                { yylval.type = malloc(sizeof(enum type_t)); *yylval.type = STRING_T; return TYPE_STRING; }

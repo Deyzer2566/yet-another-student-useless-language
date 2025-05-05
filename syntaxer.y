@@ -58,6 +58,8 @@ struct idents_with_typename_list_t {
 
 %token RETURN
 
+%token MOD
+
 %%
 
 root:
@@ -114,6 +116,7 @@ term
     | term LOGICAL_AND factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LOGICAL_AND_OP, .left = $<node>1, .right = $<node>3 }}); }
     | term BITWISE_AND factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_AND_OP, .left = $<node>1, .right = $<node>3 }}); }
     | term XOR factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = XOR_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | term MOD factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MOD_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| factor
 	;
 

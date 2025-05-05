@@ -29,5 +29,7 @@ int main() {
     a="strhfjdsg";
     //a=1;
     print(a);
+    t = b%5;
+    t = b/5;
 }
 

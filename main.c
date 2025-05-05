@@ -110,6 +110,9 @@ void draw_ast_tree(struct ast_node *node, int offset) {
         case NEQ_OP:
             printf("!=\n");
             break;
+        case MOD_OP:
+            printf("%%\n");
+            break;
         default:
             printf("unimplemnted operation\n");
             break;

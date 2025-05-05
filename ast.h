@@ -40,7 +40,8 @@ struct expression_t {
         BITWISE_NOT_OP,
         NEGATION_OP,
         XOR_OP,
-        NEQ_OP
+        NEQ_OP,
+        MOD_OP
     } operation;
     struct ast_node *left;
     struct ast_node *right;
