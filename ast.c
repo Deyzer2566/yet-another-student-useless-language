@@ -41,6 +41,16 @@ void free_node(struct ast_node *node) {
     } else if(node->type == FUNCTION_CALL_T) {
         free_node(node->value.function_call.function_name);
         free_node(node->value.function_call.param);
+    } else if(node->type == FUNCTION_T) {
+        free_node(node->value.function.function_name);
+        free_node(node->value.function.params);
+        free_node(node->value.function.stmt);
+        free(node->value.function.type);
+    } else if(node->type == IDENT_DESCRIPTION_T) {
+        free_node(node->value.ident_description.ident);
+        free(node->value.ident_description.type);
+    } else if(node->type == RETURN_T) {
+        free_node(node->value.return_.return_value);
     }
     free(node);
 }

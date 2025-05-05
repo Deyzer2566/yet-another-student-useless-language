@@ -15,7 +15,10 @@ enum type_t {
     BRANCH_T,
     WHILE_T,
     FOR_T,
-    CAST_T
+    CAST_T,
+    FUNCTION_T,
+    IDENT_DESCRIPTION_T,
+    RETURN_T
 };
 struct expression_t {
     enum operation_t{
@@ -74,6 +77,19 @@ union value_t {
         enum type_t *cast_type;
         struct ast_node *fact;
     } cast;
+    struct {
+        enum type_t *type;
+        struct ast_node *function_name;
+        struct ast_node *params;
+        struct ast_node *stmt;
+    } function;
+    struct {
+        enum type_t* type;
+        struct ast_node *ident;
+    } ident_description;
+    struct {
+        struct ast_node *return_value;
+    } return_;
 };
 struct ast_node {
     enum type_t type;

@@ -2,7 +2,18 @@
 #include <stdio.h>
 #include <string.h>
 #include "ast.h"
-#include "ast_list.h"
+#include "list.h"
+%}
+
+%{
+struct ident_with_typename_t {
+    enum type_t *type;
+    char *name;
+};
+struct idents_with_typename_list_t {
+    struct list_header_t *next;
+    struct ident_with_typename_t ident_with_typename;
+};
 %}
 
 %token NUMBER
@@ -45,10 +56,12 @@
 
 %token NEQ
 
+%token RETURN
+
 %%
 
 root:
-    stmt_list { root = $<node>1; }
+    function_definition_list { root = $<node>1; }
     ;
 
 stmt_block
@@ -63,6 +76,7 @@ stmt_list
 
 splitable_stmt
     : assign_or_expr
+    | return
     ;
 
 unsplitable_stmt
@@ -82,7 +96,6 @@ expr
     | expr LOGICAL_OR term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LOGICAL_OR_OP, .left = $<node>1, .right = $<node>3 }}); }
     | expr BITWISE_OR term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = BITWISE_OR_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| term
-    | function_call
     | expr EQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = EQ_OP, .left = $<node>1, .right = $<node>3 }}); }
     | expr NEQ term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = NEQ_OP, .left = $<node>1, .right = $<node>3 }}); }
     | expr LARGER term { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LARGER_OP, .left = $<node>1, .right = $<node>3 }}); }
@@ -116,6 +129,7 @@ factor
     | LBRACKET typename RBRACKET factor { $<node>$ = new_node(CAST_T, (union value_t){.cast = {.cast_type = $<type>2, .fact = $<node>4 }}); }
     | STRING
     | REAL
+    | function_call
 	;
 
 typename
@@ -131,6 +145,7 @@ expr_list
 
 function_call
     : IDENT LBRACKET expr_list RBRACKET { $<node>$ = new_node(FUNCTION_CALL_T, (union value_t){.function_call = {.function_name = $<node>1, .param = $<node>3}}); }
+    | IDENT LBRACKET RBRACKET { $<node>$ = new_node(FUNCTION_CALL_T, (union value_t){.function_call = {.function_name = $<node>1, .param = NULL}}); }
     ;
 
 branch
@@ -156,6 +171,29 @@ for_loop
     : FOR LBRACKET assing_expr_or_nil PARAM_DELIMITER assing_expr_or_nil PARAM_DELIMITER assing_expr_or_nil RBRACKET stmt_block { 
             $<node>$ = new_node(FOR_T, (union value_t){.for_loop = {.init = $<node>3, .limit=$<node>5, .step = $<node>7, .stmt = $<node>9}}); 
         }
+    ;
+
+ident_with_typename
+    : typename IDENT { $<node>$ = new_node(IDENT_DESCRIPTION_T, (union value_t){.ident_description = {.type = $<type>1, .ident = $<node>2 }}); }
+    ;
+
+ident_with_typename_list
+    : ident_with_typename PARAM_DELIMITER expr_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
+    | ident_with_typename { $<node>$ = new_ast_list_element($<node>1, NULL); }
+    ;
+
+function_definition
+    : typename IDENT LBRACKET ident_with_typename_list RBRACKET stmt_block { $<node>$ = new_node(FUNCTION_T, (union value_t){.function={.type=$<type>1, .function_name=$<node>2, .params = $<node>4, .stmt = $<node>6}}); }
+    | typename IDENT LBRACKET RBRACKET stmt_block { $<node>$ = new_node(FUNCTION_T, (union value_t){.function={.type=$<type>1, .function_name=$<node>2, .params = NULL, .stmt = $<node>5}}); }
+    ;
+
+function_definition_list
+    : function_definition function_definition_list { $<node>$ = new_ast_list_element($<node>1, $<node>2); }
+    | function_definition { $<node>$ = new_ast_list_element($<node>1, NULL); }
+    ;
+
+return
+    : RETURN assign_or_expr { $<node>$ = new_node(RETURN_T, (union value_t){.return_ = {.return_value = $<node>2}}); }
     ;
 
 %%

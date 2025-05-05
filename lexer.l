@@ -41,6 +41,7 @@
 "}"                     return RBRACE;
 "while"                 return WHILE;
 "for"                   return FOR;
+"return"                return RETURN;
 [a-zA-Z_][a-zA-Z0-9]*   { char *str = malloc(strlen(yytext)+1); strcpy(str, yytext); yylval.node = new_node(IDENT_T, (union value_t){.str = str}); return IDENT; }
 "="                     return ASSIGN;
 ","                     return PARAM_DELIMITER;
