@@ -17,10 +17,6 @@
     char *str;
 }
 
-%type <str> IDENT
-%type <i> NUMBER
-%type <str> STRING;
-
 %token ASSIGN
 
 %{
