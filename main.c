@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "out/syntaxer.tab.h"
 #include "ast.h"
+#include "translator.h"
 extern int yylineno;
 int yyerror(const char *str)
 {
@@ -181,6 +182,7 @@ extern struct ast_node *root;
 int main()
 {
     yyparse();
-    draw_ast_tree(root, 1);
+    // draw_ast_tree(root, 1);
+    translate(stdout, root);
     free_node(root);
 }

@@ -10,12 +10,18 @@ SOURCES = \
 	$(SYNTAXER).tab.c \
 	$(LEXER).yy.c \
 	ast.c \
-	main.c
+	main.c \
+	translator.c \
+	riscv.c \
+	mal.c
 
 HEADERS = \
 	list.h \
 	ast.h \
-	ast_list.h
+	ast_list.h \
+	translator.h \
+	riscv.h \
+	mal.h
 
 OBJECTS = $(addprefix $(OUT)/, $(SOURCES:.c=.o))
 
