@@ -183,6 +183,6 @@ int main()
 {
     yyparse();
     // draw_ast_tree(root, 1);
-    translate(stdout, root);
+    printf("%d", translate(stdout, root));
     free_node(root);
 }

@@ -27,5 +27,3 @@ void load_oper_backend(FILE *fd, enum register_t dest, enum register_t pointer, 
 void save_oper_backend(FILE *fd, enum register_t src, enum register_t pointer, offset_t off);
 void add_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2);
 void addi_oper_backend(FILE *fd, enum register_t dest, enum register_t src, sword_t imm);
-storage_t get_storage(FILE *fd);
-void free_storage(FILE *fd, storage_t storage);
