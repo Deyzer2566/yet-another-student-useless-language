@@ -27,3 +27,21 @@ void addi_oper_backend(FILE *fd, enum register_t dest, enum register_t src, swor
     //     free_storage(fd, temp);
     // }
 }
+void bne_oper_backend_imm(FILE *fd, enum register_t src1, enum register_t src2, sword_t imm) {
+    fprintf(fd, "bne "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, %d\n", src1, src2, imm);
+}
+void beq_oper_backend_imm(FILE *fd, enum register_t src1, enum register_t src2, sword_t imm) {
+    fprintf(fd, "beq "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, %d\n", src1, src2, imm);
+}
+void bne_oper_backend_label(FILE *fd, enum register_t src1, enum register_t src2, char *label) {
+    fprintf(fd, "bne "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, %s\n", src1, src2, label);
+}
+void beq_oper_backend_label(FILE *fd, enum register_t src1, enum register_t src2, char *label) {
+    fprintf(fd, "beq "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, %s\n", src1, src2, label);
+}
+void jal_oper_backend_imm(FILE *fd, enum register_t dest, sword_t imm) {
+    fprintf(fd, "jal "REGISTER_PREFIX"%d, %d\n", dest, imm);
+}
+void jal_oper_backend_label(FILE *fd, enum register_t dest, char *label) {
+    fprintf(fd, "jal "REGISTER_PREFIX"%d, %s\n", dest, label);
+}

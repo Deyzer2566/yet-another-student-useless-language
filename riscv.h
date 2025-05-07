@@ -27,3 +27,9 @@ void load_oper_backend(FILE *fd, enum register_t dest, enum register_t pointer, 
 void save_oper_backend(FILE *fd, enum register_t src, enum register_t pointer, offset_t off);
 void add_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2);
 void addi_oper_backend(FILE *fd, enum register_t dest, enum register_t src, sword_t imm);
+void bne_oper_backend_imm(FILE *fd, enum register_t src1, enum register_t src2, sword_t imm);
+void beq_oper_backend_imm(FILE *fd, enum register_t src1, enum register_t src2, sword_t imm);
+void bne_oper_backend_label(FILE *fd, enum register_t src1, enum register_t src2, char *label);
+void beq_oper_backend_label(FILE *fd, enum register_t src1, enum register_t src2, char *label);
+void jal_oper_backend_imm(FILE *fd, enum register_t dest, sword_t imm);
+void jal_oper_backend_label(FILE *fd, enum register_t dest, char *label);
