@@ -193,13 +193,11 @@ int parse_function_call(FILE *fd, struct ast_node *node, storage_t res) {
         arg_count ++;
     }
     if(arg_count > ABI_REGS_COUNT) {
-        fprintf(stderr, "count of arguments more than max");
+        fprintf(stderr, "count of arguments more than space for them!");
         return -1;
     }
     struct ast_node *cur_param = node->value.function_call.param;
-    for(int i = 0;i < ABI_REGS_COUNT; i++) {
-        if(cur_param == NULL)
-            break;
+    for(int i = 0;i < ABI_REGS_COUNT && cur_param != NULL; i++) {
         get_specific_storage(fd, r1+i);
         parse_expression(fd, cur_param->value.ast_list_element.node, r1+i, false);
         cur_param = cur_param->value.ast_list_element.next;
@@ -245,20 +243,11 @@ int parse_statement_list(FILE *fd, struct ast_node *node) {
     }
     switch (node->type) {
     case AST_LIST_ELEMENT_T:
-        new_space();
-        inc_label_branch_count();
-        char *stack_size_label = get_label_with_counter();
-        allocate_stack_label(fd, stack_size_label);
         for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
             if(parse_statement(fd, cur->value.ast_list_element.node) == -1) {
                 return -1;
             }
         }
-        free_stack_label(fd, stack_size_label);
-        jal_oper_backend_imm(fd, zero, WORD_SIZE);
-        fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space()-1)*WORD_SIZE);
-        pop_space();
-        free(stack_size_label);
         break;
     case EXPRESSION_T:
     case IDENT_T:
@@ -286,9 +275,18 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
     }
     add_label_level(node->value.function.function_name->value.str);
     fprintf(fd, "%s:\n", node->value.function.function_name->value.str);
+    new_space();
+    inc_label_branch_count();
+    char *stack_size_label = get_label_with_counter();
+    allocate_stack_label(fd, stack_size_label);
     if(parse_statement_list(fd, node->value.function.stmt) == -1) {
         return -1;
     }
+    free_stack_label(fd, stack_size_label);
+    jal_oper_backend_imm(fd, zero, WORD_SIZE);
+    fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space()-1)*WORD_SIZE);
+    pop_space();
+    free(stack_size_label);
     pop_label_level();
     return 0;
 }
