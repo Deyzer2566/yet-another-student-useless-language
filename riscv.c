@@ -5,6 +5,9 @@
 void li_oper_backend(FILE *fd, enum register_t dest, sword_t value) {
     fprintf(fd, "li "REGISTER_PREFIX"%d, %d\n", dest, value);
 }
+void li_oper_backend_label(FILE *fd, enum register_t dest, char *label) {
+    fprintf(fd, "li "REGISTER_PREFIX"%d, %s\n", dest, label);
+}
 void sub_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
     fprintf(fd, "sub "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
 }
@@ -44,4 +47,7 @@ void jal_oper_backend_imm(FILE *fd, enum register_t dest, sword_t imm) {
 }
 void jal_oper_backend_label(FILE *fd, enum register_t dest, char *label) {
     fprintf(fd, "jal "REGISTER_PREFIX"%d, %s\n", dest, label);
+}
+void jalr_oper_backend(FILE *fd, enum register_t dest, enum register_t src, offset_t off) {
+    fprintf(fd, "jalr "REGISTER_PREFIX"%d, r%d, %d\n", dest, src, off);
 }

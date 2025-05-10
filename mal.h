@@ -8,3 +8,8 @@ int load_ident(FILE *fd, storage_t dest, char* name, bool create_if_not_exists);
 storage_t get_storage(FILE *fd);
 void free_storage(FILE *fd, storage_t storage);
 void allocate_storage(storage_t storage);
+void get_specific_storage(FILE *fd, storage_t storage);
+void new_space();
+void pop_space();
+size_t size_space();
+size_t count_idents();

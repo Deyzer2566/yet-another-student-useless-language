@@ -8,12 +8,15 @@
 
 int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_allocate_ident);
 int parse_statement_list(FILE *fd, struct ast_node *node);
+int parse_function_call(FILE *fd, struct ast_node *node, storage_t res);
+char *get_label();
+char *get_label_with_counter();
 
 int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool can_allocate_ident) {
     storage_t src1, src2;
     allocate_storage(dest);
     src1 = get_storage(fd);
-    if(parse_expression(fd, node->value.expression.left, src1, node->value.expression.operation != NEGATION_OP) == -1)
+    if(parse_expression(fd, node->value.expression.left, src1, node->value.expression.operation != NEGATION_OP && can_allocate_ident) == -1)
         return -1;
     if(node->value.expression.operation != NEGATION_OP) {
         allocate_storage(dest);
@@ -51,7 +54,10 @@ int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_al
         return load_ident(fd, res, node->value.str, can_allocate_ident);
         break;
     case EXPRESSION_T:
-        return translate_expression(fd, node, res, true);
+        return translate_expression(fd, node, res, can_allocate_ident);
+        break;
+    case FUNCTION_CALL_T:
+        return parse_function_call(fd, node, res);
         break;
     default:
         fprintf(stderr, "not implemented operation!");
@@ -123,6 +129,21 @@ char *get_label() {
     size_t len = 0;
     for(struct label_waterfall_list_t *cur = begin; cur != NULL; cur = (struct label_waterfall_list_t *)cur->next) {
         len += strlen(cur->label);
+        len += sizeof(LABEL_SPLITTER);
+    }
+    len += 1;
+    char *label = malloc(len);
+    label[0] = 0;
+    for(struct label_waterfall_list_t *cur = begin; cur != NULL; cur = (struct label_waterfall_list_t *)cur->next) {
+        strcat(label, cur->label);
+        strcat(label, LABEL_SPLITTER);
+    }
+    return label;
+}
+char *get_label_with_counter() {
+    size_t len = 0;
+    for(struct label_waterfall_list_t *cur = begin; cur != NULL; cur = (struct label_waterfall_list_t *)cur->next) {
+        len += strlen(cur->label);
         char num[26];
         itoa(cur->branch_counter, num, 10);
         len += strlen(num);
@@ -146,9 +167,9 @@ int parse_branch(FILE *fd, struct ast_node *node) {
         return -1;
     }
     inc_label_branch_count();
-    char *label_else = get_label();
+    char *label_else = get_label_with_counter();
     inc_label_branch_count();
-    char *label_exit = get_label();
+    char *label_exit = get_label_with_counter();
     beq_oper_backend_label(fd, expr_result, zero, label_else);
     if(parse_statement_list(fd, node->value.branch.then_stmt) == -1) {
         return -1;
@@ -166,25 +187,48 @@ int parse_branch(FILE *fd, struct ast_node *node) {
     free(label_exit);
 }
 
-int parse_function_call(FILE *fd, struct ast_node *node) {
-    return -1;
+int parse_function_call(FILE *fd, struct ast_node *node, storage_t res) {
+    size_t arg_count = 0;
+    for(struct ast_node *arg = node->value.function_call.param; arg != NULL; arg = arg->value.ast_list_element.next) {
+        arg_count ++;
+    }
+    if(arg_count > ABI_REGS_COUNT) {
+        fprintf(stderr, "count of arguments more than max");
+        return -1;
+    }
+    struct ast_node *cur_param = node->value.function_call.param;
+    for(int i = 0;i < ABI_REGS_COUNT; i++) {
+        if(cur_param == NULL)
+            break;
+        get_specific_storage(fd, r1+i);
+        parse_expression(fd, cur_param->value.ast_list_element.node, r1+i, false);
+        cur_param = cur_param->value.ast_list_element.next;
+    }
+    get_specific_storage(fd, lr);
+    jal_oper_backend_label(fd, lr, node->value.function_call.function_name->value.str);
+    free_storage(fd, lr);
+    for(int i = arg_count-1;i >=0; i--) {
+        free_storage(fd, r1+i);
+    }
+    return 0;
 }
 
 int parse_statement(FILE *fd, struct ast_node *node) {
+    fwrite("\n",1,1,fd);
     switch(node->type) {
     case EXPRESSION_T:
     case IDENT_T:
     case STRING_T:
     case REAL_T:
+        return parse_expression(fd, node, dummy, true);
+        break;
     case CAST_T:
+    case FUNCTION_CALL_T:
         return parse_expression(fd, node, dummy, false);
         break;
     case FOR_T:
     case WHILE_T:
         return parse_loop(fd, node);
-        break;
-    case FUNCTION_CALL_T:
-        return parse_function_call(fd, node);
         break;
     case BRANCH_T:
         return parse_branch(fd, node);
@@ -196,13 +240,37 @@ int parse_statement(FILE *fd, struct ast_node *node) {
 }
 
 int parse_statement_list(FILE *fd, struct ast_node *node) {
+    if(node == NULL) {
+        return 0;
+    }
     switch (node->type) {
     case AST_LIST_ELEMENT_T:
+        new_space();
+        inc_label_branch_count();
+        char *stack_size_label = get_label_with_counter();
+        // выделяем место на стеке для локальных переменных блока
+        storage_t temp = r1 + ABI_REGS_COUNT;
+        addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
+        save_oper_backend(fd, temp, sp, 0);
+        li_oper_backend_label(fd, temp, stack_size_label);
+        load_oper_backend(fd, temp, temp, 0);
+        sub_oper_backend(fd, sp, sp, temp);
+        add_oper_backend(fd, temp, sp, temp);
+        load_oper_backend(fd, temp, sp, WORD_SIZE);
+        //
         for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
             if(parse_statement(fd, cur->value.ast_list_element.node) == -1) {
                 return -1;
             }
         }
+        li_oper_backend_label(fd, temp, stack_size_label);
+        load_oper_backend(fd, temp, temp, 0);
+        addi_oper_backend(fd, sp, sp, WORD_SIZE);
+        add_oper_backend(fd, sp, sp, temp);
+        jal_oper_backend_imm(fd, zero, WORD_SIZE);
+        fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space()-1)*WORD_SIZE);
+        pop_space();
+        free(stack_size_label);
         break;
     case EXPRESSION_T:
     case IDENT_T:
@@ -238,6 +306,8 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
 }
 
 int parse_function_def_list(FILE *fd, struct ast_node *node) {
+    li_oper_backend(fd, sp, 0xffff+1);
+    jal_oper_backend_label(fd, zero, "main");
     switch(node->type) {
     case AST_LIST_ELEMENT_T:
         for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
@@ -254,6 +324,8 @@ int parse_function_def_list(FILE *fd, struct ast_node *node) {
         return -1;
         break;
     }
+    fprintf(fd, "print:\newrite x1\njalr x0, x%d, 0\n", lr);
+    fprintf(fd, "exit:\nebreak\n");
     return 0;
 }
 
