@@ -13,3 +13,7 @@ void new_space();
 void pop_space();
 size_t size_space();
 size_t count_idents();
+void allocate_stack(FILE *fd, unsigned int word_count);
+void allocate_stack_label(FILE *fd, char *stack_size_label);
+void free_stack(FILE *fd, unsigned int word_count);
+void free_stack_label(FILE *fd, char *stack_size_label);

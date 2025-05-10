@@ -213,3 +213,53 @@ size_t count_idents() {
     }
     return count;
 }
+
+void allocate_stack(FILE *fd, unsigned int word_count) {
+    storage_t temp = r1;
+    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
+    save_oper_backend(fd, temp, sp, 0);
+    li_oper_backend(fd, temp, word_count);
+    sub_oper_backend(fd, sp, sp, temp);
+    add_oper_backend(fd, temp, sp, temp);
+    load_oper_backend(fd, temp, sp, WORD_SIZE);
+}
+
+void allocate_stack_label(FILE *fd, char *stack_size_label) {
+    storage_t temp = r1;
+    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
+    save_oper_backend(fd, temp, sp, 0);
+    li_oper_backend_label(fd, temp, stack_size_label);
+    load_oper_backend(fd, temp, temp, 0);
+    sub_oper_backend(fd, sp, sp, temp);
+    add_oper_backend(fd, temp, sp, temp);
+    load_oper_backend(fd, temp, sp, WORD_SIZE);
+}
+
+void free_stack(FILE *fd, unsigned int word_count) {
+    storage_t temp = r1;
+    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
+    save_oper_backend(fd, temp, sp, 0);
+
+    li_oper_backend(fd, temp, word_count);
+    addi_oper_backend(fd, temp, temp, 2*WORD_SIZE);
+    add_oper_backend(fd, sp, sp, temp);
+
+    sub_oper_backend(fd, temp, sp, temp);
+    addi_oper_backend(fd, temp, temp, (sword_t)-WORD_SIZE);
+    load_oper_backend(fd, temp, temp, 0);
+}
+
+void free_stack_label(FILE *fd, char *stack_size_label) {
+    storage_t temp = r1;
+    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
+    save_oper_backend(fd, temp, sp, 0);
+
+    li_oper_backend_label(fd, temp, stack_size_label);
+    load_oper_backend(fd, temp, temp, 0);
+    addi_oper_backend(fd, temp, temp, 2*WORD_SIZE);
+    add_oper_backend(fd, sp, sp, temp);
+
+    sub_oper_backend(fd, temp, sp, temp);
+    addi_oper_backend(fd, temp, temp, (sword_t)-WORD_SIZE);
+    load_oper_backend(fd, temp, temp, 0);
+}

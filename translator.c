@@ -248,25 +248,13 @@ int parse_statement_list(FILE *fd, struct ast_node *node) {
         new_space();
         inc_label_branch_count();
         char *stack_size_label = get_label_with_counter();
-        // выделяем место на стеке для локальных переменных блока
-        storage_t temp = r1 + ABI_REGS_COUNT;
-        addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
-        save_oper_backend(fd, temp, sp, 0);
-        li_oper_backend_label(fd, temp, stack_size_label);
-        load_oper_backend(fd, temp, temp, 0);
-        sub_oper_backend(fd, sp, sp, temp);
-        add_oper_backend(fd, temp, sp, temp);
-        load_oper_backend(fd, temp, sp, WORD_SIZE);
-        //
+        allocate_stack_label(fd, stack_size_label);
         for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
             if(parse_statement(fd, cur->value.ast_list_element.node) == -1) {
                 return -1;
             }
         }
-        li_oper_backend_label(fd, temp, stack_size_label);
-        load_oper_backend(fd, temp, temp, 0);
-        addi_oper_backend(fd, sp, sp, WORD_SIZE);
-        add_oper_backend(fd, sp, sp, temp);
+        free_stack_label(fd, stack_size_label);
         jal_oper_backend_imm(fd, zero, WORD_SIZE);
         fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space()-1)*WORD_SIZE);
         pop_space();
