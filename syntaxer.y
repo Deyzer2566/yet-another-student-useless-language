@@ -181,7 +181,7 @@ ident_with_typename
     ;
 
 ident_with_typename_list
-    : ident_with_typename PARAM_DELIMITER expr_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
+    : ident_with_typename PARAM_DELIMITER ident_with_typename_list { $<node>$ = new_ast_list_element($<node>1, $<node>3); }
     | ident_with_typename { $<node>$ = new_ast_list_element($<node>1, NULL); }
     ;
 
