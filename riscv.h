@@ -37,3 +37,6 @@ void beq_oper_backend_label(FILE *fd, enum register_t src1, enum register_t src2
 void jal_oper_backend_imm(FILE *fd, enum register_t dest, sword_t imm);
 void jal_oper_backend_label(FILE *fd, enum register_t dest, char *label);
 void jalr_oper_backend(FILE *fd, enum register_t dest, enum register_t src, offset_t off);
+void push_oper(FILE *fd, enum register_t src);
+void pop_oper(FILE *fd, enum register_t dest);
+void ebreak_oper_backend(FILE *fd);

@@ -6,12 +6,15 @@ struct ident_t {
     char* name;
     enum {
         ON_REGISTER,
-        ON_STACK
+        IN_MEMORY
     } map;
     storage_t mapped_reg;
     union {
         offset_t offset;
     } addr;
+    enum {
+        ON_STACK
+    } memory_mapping_type;
     enum {
         INT,
         REAL,
@@ -34,8 +37,6 @@ static struct ident_t *find_ident_by_name(char *name);
 static struct ident_t *find_ident_by_reg(storage_t storage);
 int load_ident(FILE *fd, storage_t dest, char* name, bool create_if_not_exists);
 static void save_ident(FILE *fd, struct ident_t *ident);
-static void inc_idents_addresses();
-static void dec_idents_addresses();
 
 static int storage_access[STORAGE_COUNT]={0};
 static storage_t get_least_used_register() {
@@ -86,7 +87,6 @@ void free_storage(FILE *fd, storage_t storage) {
     }
     load_oper_backend(fd, storage, sp, 0);
     addi_oper_backend(fd, sp, sp, WORD_SIZE);
-    dec_idents_addresses();
     pop_from_mapping_history(fd, storage);
 }
 
@@ -102,7 +102,6 @@ void get_specific_storage(FILE *fd, storage_t storage) {
     if(ident != NULL) {
         save_ident(fd, ident);
     }
-    inc_idents_addresses();
     push_in_mapping_history(storage, ident);
     storage_access[storage-r1] = 0;
 }
@@ -137,7 +136,11 @@ int load_ident(FILE *fd, storage_t dest, char* name, bool create_if_not_exists) 
         new_ident->ident.map = ON_REGISTER;
         new_ident->ident.mapped_reg = dest;
         new_ident->next = (struct list_header_t *)idents;
-        new_ident->ident.addr.offset = size_space()+WORD_SIZE;
+        new_ident->ident.memory_mapping_type = ON_STACK;
+        if(idents != NULL)
+            new_ident->ident.addr.offset = idents->ident.addr.offset-1;
+        else 
+            new_ident->ident.addr.offset = -1;
         idents = new_ident;
         return 0;
     }
@@ -145,18 +148,22 @@ int load_ident(FILE *fd, storage_t dest, char* name, bool create_if_not_exists) 
     case ON_REGISTER:
         addi_oper_backend(fd, dest, ident->mapped_reg, 0);
         break;
-    case ON_STACK:
-        if(abs(ident->addr.offset) > 1<<11) {
-            storage_t temp = get_storage(fd);
-            li_oper_backend(fd, temp, ident->addr.offset);
-            add_oper_backend(fd, temp, temp, sp);
-            load_oper_backend(fd, dest, temp, 0);
-            free_storage(fd, temp);
-        } else {
-            load_oper_backend(fd, dest, sp, ident->addr.offset);           
+    case IN_MEMORY:
+        switch(ident->memory_mapping_type) {
+        case ON_STACK:
+            if(abs(ident->addr.offset) > 1<<11) {
+                storage_t temp = get_storage(fd);
+                li_oper_backend(fd, temp, ident->addr.offset);
+                add_oper_backend(fd, temp, temp, fp);
+                load_oper_backend(fd, dest, temp, 0);
+                free_storage(fd, temp);
+            } else {
+                load_oper_backend(fd, dest, fp, ident->addr.offset);
+            }
+            ident->map = ON_REGISTER;
+            ident->mapped_reg = dest;
+            break;
         }
-        ident->map = ON_REGISTER;
-        ident->mapped_reg = dest;
         break;
     default:
         fprintf(stderr, "unsupported load_ident map type");
@@ -165,21 +172,11 @@ int load_ident(FILE *fd, storage_t dest, char* name, bool create_if_not_exists) 
     return 0;
 }
 static void save_ident(FILE *fd, struct ident_t *ident) {
-    ident->map = ON_STACK;
-    save_oper_backend(fd, ident->mapped_reg, sp, ident->addr.offset);
-}
-static void inc_idents_addresses() {
-    for (struct ident_list_t *cur = idents; cur != NULL; cur = (struct ident_list_t *)cur->next) {
-        if(cur->ident.map == ON_STACK) {
-            cur->ident.addr.offset += WORD_SIZE;
-        }
-    }
-}
-static void dec_idents_addresses() {
-    for (struct ident_list_t *cur = idents; cur != NULL; cur = (struct ident_list_t *)cur->next) {
-        if(cur->ident.map == ON_STACK) {
-            cur->ident.addr.offset -= WORD_SIZE;
-        }
+    ident->map = IN_MEMORY;
+    switch(ident->memory_mapping_type) {
+    case ON_STACK:
+        save_oper_backend(fd, ident->mapped_reg, fp, ident->addr.offset);
+        break;
     }
 }
 
@@ -225,41 +222,19 @@ void allocate_stack(FILE *fd, unsigned int word_count) {
 }
 
 void allocate_stack_label(FILE *fd, char *stack_size_label) {
+    push_oper(fd, fp);
+    add_oper_backend(fd, fp, sp, zero);
+
     storage_t temp = r1;
-    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
-    save_oper_backend(fd, temp, sp, 0);
+    push_oper(fd, temp);
+
     li_oper_backend_label(fd, temp, stack_size_label);
     load_oper_backend(fd, temp, temp, 0);
     sub_oper_backend(fd, sp, sp, temp);
-    add_oper_backend(fd, temp, sp, temp);
-    load_oper_backend(fd, temp, sp, WORD_SIZE);
+    load_oper_backend(fd, temp, fp, -WORD_SIZE);
 }
 
-void free_stack(FILE *fd, unsigned int word_count) {
-    storage_t temp = r1;
-    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
-    save_oper_backend(fd, temp, sp, 0);
-
-    li_oper_backend(fd, temp, word_count);
-    addi_oper_backend(fd, temp, temp, 2*WORD_SIZE);
-    add_oper_backend(fd, sp, sp, temp);
-
-    sub_oper_backend(fd, temp, sp, temp);
-    addi_oper_backend(fd, temp, temp, (sword_t)-WORD_SIZE);
-    load_oper_backend(fd, temp, temp, 0);
-}
-
-void free_stack_label(FILE *fd, char *stack_size_label) {
-    storage_t temp = r1;
-    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
-    save_oper_backend(fd, temp, sp, 0);
-
-    li_oper_backend_label(fd, temp, stack_size_label);
-    load_oper_backend(fd, temp, temp, 0);
-    addi_oper_backend(fd, temp, temp, 2*WORD_SIZE);
-    add_oper_backend(fd, sp, sp, temp);
-
-    sub_oper_backend(fd, temp, sp, temp);
-    addi_oper_backend(fd, temp, temp, (sword_t)-WORD_SIZE);
-    load_oper_backend(fd, temp, temp, 0);
+void free_stack(FILE *fd) {
+    add_oper_backend(fd, sp, fp, zero);
+    pop_oper(fd, fp);
 }

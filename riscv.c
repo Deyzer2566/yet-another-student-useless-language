@@ -49,5 +49,16 @@ void jal_oper_backend_label(FILE *fd, enum register_t dest, char *label) {
     fprintf(fd, "jal "REGISTER_PREFIX"%d, %s\n", dest, label);
 }
 void jalr_oper_backend(FILE *fd, enum register_t dest, enum register_t src, offset_t off) {
-    fprintf(fd, "jalr "REGISTER_PREFIX"%d, r%d, %d\n", dest, src, off);
+    fprintf(fd, "jalr "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, %d\n", dest, src, off);
+}
+void push_oper(FILE *fd, enum register_t src) {
+    addi_oper_backend(fd, sp, sp, (sword_t)-WORD_SIZE);
+    save_oper_backend(fd, src, sp, 0);
+}
+void pop_oper(FILE *fd, enum register_t dest) {
+    load_oper_backend(fd, dest, sp, 0);
+    addi_oper_backend(fd, sp, sp, WORD_SIZE);
+}
+void ebreak_oper_backend(FILE *fd) {
+    fprintf(fd, "ebreak\n");
 }

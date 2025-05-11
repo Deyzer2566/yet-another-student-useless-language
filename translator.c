@@ -282,9 +282,9 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
     if(parse_statement_list(fd, node->value.function.stmt) == -1) {
         return -1;
     }
-    free_stack_label(fd, stack_size_label);
-    jal_oper_backend_imm(fd, zero, WORD_SIZE);
-    fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space()-1)*WORD_SIZE);
+    free_stack(fd);
+    jalr_oper_backend(fd, zero, lr, 0);
+    fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space())*WORD_SIZE);
     pop_space();
     free(stack_size_label);
     pop_label_level();
@@ -293,7 +293,12 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
 
 int parse_function_def_list(FILE *fd, struct ast_node *node) {
     li_oper_backend(fd, sp, 0xffff+1);
-    jal_oper_backend_label(fd, zero, "main");
+
+    li_oper_backend(fd, r1, 87654321);//проверяем, что после выполнения main
+    li_oper_backend(fd, fp, 12345678);//содержимое стека будет корректным
+
+    jal_oper_backend_label(fd, lr, "main");
+    ebreak_oper_backend(fd);
     switch(node->type) {
     case AST_LIST_ELEMENT_T:
         for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
