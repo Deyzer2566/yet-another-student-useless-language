@@ -11,6 +11,7 @@ int parse_statement_list(FILE *fd, struct ast_node *node);
 int parse_function_call(FILE *fd, struct ast_node *node, storage_t res);
 char *get_label();
 char *get_label_with_counter();
+char *exit_function_label;
 
 int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool can_allocate_ident) {
     storage_t src1, src2;
@@ -32,6 +33,7 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
             break;
         case ASSIGN_OP:
             addi_oper_backend(fd, src1, src2, 0);
+            update_ident(fd, src1, node->value.expression.left->value.str);
             addi_oper_backend(fd, dest, src1, 0);
             break;
         default:
@@ -99,6 +101,8 @@ void pop_label_level() {
     end = (struct label_waterfall_list_t *)end->prev;
     if(end != NULL)
         end->next = NULL;
+    else
+        begin = NULL;
     free(last);
 }
 unsigned int get_label_branch_count() {
@@ -187,27 +191,55 @@ int parse_branch(FILE *fd, struct ast_node *node) {
     free(label_exit);
 }
 
+int min(int a, int b) {
+    return (a>b)?b:a;
+}
+
 int parse_function_call(FILE *fd, struct ast_node *node, storage_t res) {
+    push_oper(fd, ret);
+    push_oper(fd, lr);
     size_t arg_count = 0;
     for(struct ast_node *arg = node->value.function_call.param; arg != NULL; arg = arg->value.ast_list_element.next) {
         arg_count ++;
     }
-    if(arg_count > ABI_REGS_COUNT) {
-        fprintf(stderr, "count of arguments more than space for them!");
-        return -1;
-    }
     struct ast_node *cur_param = node->value.function_call.param;
-    for(int i = 0;i < ABI_REGS_COUNT && cur_param != NULL; i++) {
+    for(int i = 0;i < min(arg_count, ABI_REGS_COUNT); i++) {
         get_specific_storage(fd, r1+i);
         parse_expression(fd, cur_param->value.ast_list_element.node, r1+i, false);
         cur_param = cur_param->value.ast_list_element.next;
     }
-    get_specific_storage(fd, lr);
+    if(arg_count > ABI_REGS_COUNT) {
+        addi_oper_backend(fd, sp, sp, WORD_SIZE*(-arg_count+ABI_REGS_COUNT));
+        add_oper_backend(fd, ret, sp, zero);
+        for(int i = ABI_REGS_COUNT; i < arg_count; i++) {
+            storage_t temp = get_storage(fd);
+            parse_expression(fd, cur_param->value.ast_list_element.node, temp, false);
+            save_oper_backend(fd, temp, ret, i-ABI_REGS_COUNT);
+            free_storage(fd, temp);
+            cur_param = cur_param->value.ast_list_element.next;
+        }
+    }
     jal_oper_backend_label(fd, lr, node->value.function_call.function_name->value.str);
-    free_storage(fd, lr);
-    for(int i = arg_count-1;i >=0; i--) {
+    if(arg_count > ABI_REGS_COUNT) {
+        addi_oper_backend(fd, sp, sp, WORD_SIZE*(arg_count-ABI_REGS_COUNT));
+    }
+    for(int i = min(arg_count, ABI_REGS_COUNT)-1;i >=0; i--) {
         free_storage(fd, r1+i);
     }
+    pop_oper(fd, lr);
+    add_oper_backend(fd, res, ret, zero);
+    pop_oper(fd, ret);
+    return 0;
+}
+
+int parse_return(FILE *fd, struct ast_node *node) {
+    storage_t return_storage = get_storage(fd);
+    if(parse_expression(fd, node->value.return_.return_value, return_storage, false) == -1) {
+        return -1;
+    }
+    add_oper_backend(fd, ret, return_storage, zero);
+    free_storage(fd, return_storage);
+    jal_oper_backend_label(fd, zero, exit_function_label);
     return 0;
 }
 
@@ -230,6 +262,9 @@ int parse_statement(FILE *fd, struct ast_node *node) {
         break;
     case BRANCH_T:
         return parse_branch(fd, node);
+        break;
+    case RETURN_T:
+        return parse_return(fd, node);
         break;
     default:
         return -1;
@@ -278,16 +313,27 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
     new_space();
     inc_label_branch_count();
     char *stack_size_label = get_label_with_counter();
+    inc_label_branch_count();
+    exit_function_label = get_label_with_counter();
+    size_t arg_counter = 0;
+    for(struct ast_node *param = node->value.function.params; param != NULL; param = param->value.ast_list_element.next) {
+        add_function_param(param->value.ast_list_element.node->value.ident_description.ident->value.str,
+            (arg_counter<ABI_REGS_COUNT)?(r1+arg_counter):(zero),
+            (arg_counter<ABI_REGS_COUNT)?(-1-arg_counter):(arg_counter-ABI_REGS_COUNT+1));
+        arg_counter++;
+    }
     allocate_stack_label(fd, stack_size_label);
     if(parse_statement_list(fd, node->value.function.stmt) == -1) {
         return -1;
     }
+    fprintf(fd, "%s:\n", exit_function_label);
     free_stack(fd);
     jalr_oper_backend(fd, zero, lr, 0);
     fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space())*WORD_SIZE);
     pop_space();
     free(stack_size_label);
     pop_label_level();
+    free(exit_function_label);
     return 0;
 }
 

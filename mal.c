@@ -1,6 +1,8 @@
 #include "mal.h"
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <assert.h>
 
 struct ident_t {
     char* name;
@@ -40,7 +42,7 @@ static void save_ident(FILE *fd, struct ident_t *ident);
 
 static int storage_access[STORAGE_COUNT]={0};
 static storage_t get_least_used_register() {
-    int max_access = 0;
+    int max_access = INT_MIN;
     storage_t reg_num = 0;
     for(int i = 0;i < STORAGE_COUNT; i++) {
         if(storage_access[i] > max_access) {
@@ -85,8 +87,7 @@ void free_storage(FILE *fd, storage_t storage) {
     if(ident != NULL) {
         save_ident(fd, ident);
     }
-    load_oper_backend(fd, storage, sp, 0);
-    addi_oper_backend(fd, sp, sp, WORD_SIZE);
+    pop_oper(fd, storage);
     pop_from_mapping_history(fd, storage);
 }
 
@@ -96,8 +97,7 @@ void allocate_storage(storage_t storage) {
 }
 
 void get_specific_storage(FILE *fd, storage_t storage) {
-    addi_oper_backend(fd, sp, sp, (sword_t)-WORD_SIZE);
-    save_oper_backend(fd, storage, sp, 0);
+    push_oper(fd, storage);
     struct ident_t *ident = find_ident_by_reg(storage);
     if(ident != NULL) {
         save_ident(fd, ident);
@@ -171,6 +171,18 @@ int load_ident(FILE *fd, storage_t dest, char* name, bool create_if_not_exists) 
     }
     return 0;
 }
+void update_ident(FILE *fd, storage_t storage, char *name) {
+    struct ident_t *ident = find_ident_by_name(name);
+    assert(ident != NULL);
+    switch(ident->map) {
+    case IN_MEMORY:
+        save_ident(fd, ident);
+        break;
+    case ON_REGISTER:
+        add_oper_backend(fd, ident->mapped_reg, storage, zero);
+        break;
+    }
+}
 static void save_ident(FILE *fd, struct ident_t *ident) {
     ident->map = IN_MEMORY;
     switch(ident->memory_mapping_type) {
@@ -211,10 +223,27 @@ size_t count_idents() {
     return count;
 }
 
+void add_function_param(char *name, storage_t mapped_register, offset_t offset_rel_fp) {
+    struct ident_list_t *new_ident = malloc(sizeof(struct ident_list_t));
+    new_ident->ident.name = malloc(strlen(name)+1);
+    new_ident->ident.name[0] = '\0';
+    strcpy(new_ident->ident.name, name);
+    if(mapped_register == zero) {
+        new_ident->ident.map = IN_MEMORY;
+    } else {
+        new_ident->ident.map = ON_REGISTER;
+    }
+    new_ident->ident.mapped_reg = mapped_register;
+    new_ident->next = (struct list_header_t *)idents;
+    new_ident->ident.memory_mapping_type = ON_STACK;
+    new_ident->ident.addr.offset = offset_rel_fp;
+    idents = new_ident;
+}
+
 void allocate_stack(FILE *fd, unsigned int word_count) {
     storage_t temp = r1;
-    addi_oper_backend(fd, sp, sp, (sword_t)(-WORD_SIZE));
-    save_oper_backend(fd, temp, sp, 0);
+    push_oper(fd, temp);
+
     li_oper_backend(fd, temp, word_count);
     sub_oper_backend(fd, sp, sp, temp);
     add_oper_backend(fd, temp, sp, temp);

@@ -7,6 +7,7 @@ enum register_t {
     r2,
     r3,
     r4,
+    ret,
     sp,
     fp,
     lr,
