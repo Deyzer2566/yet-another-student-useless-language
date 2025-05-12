@@ -41,3 +41,5 @@ void jalr_oper_backend(FILE *fd, enum register_t dest, enum register_t src, offs
 void push_oper(FILE *fd, enum register_t src);
 void pop_oper(FILE *fd, enum register_t dest);
 void ebreak_oper_backend(FILE *fd);
+void seq_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2);
+void mul_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2);

@@ -62,3 +62,9 @@ void pop_oper(FILE *fd, enum register_t dest) {
 void ebreak_oper_backend(FILE *fd) {
     fprintf(fd, "ebreak\n");
 }
+void seq_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "seq "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void mul_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "mul "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}

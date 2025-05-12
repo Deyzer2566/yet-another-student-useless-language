@@ -1,5 +1,6 @@
 #include "translator.h"
 #include "mal.h"
+#include "list.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -12,6 +13,44 @@ int parse_function_call(FILE *fd, struct ast_node *node, storage_t res);
 char *get_label();
 char *get_label_with_counter();
 char *exit_function_label;
+void inc_label_branch_count();
+enum ident_type_t ast_type_to_mal(enum type_t type) {
+    switch (type) {
+    case INTEGER_T:
+        return INTEGER;
+        break;
+    case REAL_T:
+        return REAL;
+        break;
+    case STRING_T:
+        return POINTER;
+        break;
+    default:
+        return UNKNOWN;
+        break;
+    }
+}
+
+
+struct function_definition_t {
+    char *name;
+    enum ident_type_t return_value_type;
+};
+make_list(function_definition_t, struct function_definition_t);
+make_find_by_str(struct function_definition_t, function_definition_t, name);
+make_add(function_definition_t, struct function_definition_t);
+struct function_definition_t_list_t *functions = NULL;
+
+struct static_ident_t {
+    char *label;
+    uint8_t *contain;
+    size_t len;
+    enum ident_type_t type;
+};
+make_list(static_ident_t, struct static_ident_t);
+make_add(static_ident_t, struct static_ident_t);
+make_free(static_ident_t, struct static_ident_t);
+struct static_ident_t_list_t *static_idents = NULL;
 
 int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool can_allocate_ident) {
     storage_t src1, src2;
@@ -30,11 +69,22 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
     switch(node->value.expression.operation) {
         case PLUS_OP:
             add_oper_backend(fd, dest, src1, src2);
+            set_storage_type(dest, src2);
             break;
         case ASSIGN_OP:
             addi_oper_backend(fd, src1, src2, 0);
+            set_storage_type(src1, get_storage_type(src2));
             update_ident(fd, src1, node->value.expression.left->value.str);
             addi_oper_backend(fd, dest, src1, 0);
+            break;
+        case MINUS_OP:
+            sub_oper_backend(fd, dest, src1, src2);
+            break;
+        case EQ_OP:
+            seq_oper_backend(fd, dest, src1, src2);
+            break;
+        case MULTIPLICATION_OP:
+            mul_oper_backend(fd, dest, src1, src2);
             break;
         default:
             fprintf(stderr,"not implemented expression");
@@ -47,13 +97,44 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
     free_storage(fd, src1);
 }
 
+uword_t real_to_word(float f) {
+    union {
+        float f;
+        int i;
+    } converter;
+    converter.f = f;
+    return converter.i;
+}
+
 int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_allocate_ident) {
     switch(node->type) {
     case INTEGER_T:
         li_oper_backend(fd, res, node->value.i);
+        set_storage_type(res, INTEGER);
+        break;
+    case REAL_T:
+        li_oper_backend(fd, res, (sword_t)real_to_word(node->value.f));
+        set_storage_type(res, REAL);
+        break;
+    case STRING_T:
+        inc_label_branch_count();
+        char *label = get_label_with_counter();
+        add_static_ident_t(&static_idents, (struct static_ident_t){
+            .contain = node->value.str,
+            .len = strlen(node->value.str)+1,
+            .type = POINTER,
+            .label = label
+        });
+        li_oper_backend_label(fd, res, label);
+        set_storage_type(res, POINTER);
         break;
     case IDENT_T:
-        return load_ident(fd, res, node->value.str, can_allocate_ident);
+        int ret = load_ident(fd, res, node->value.str);
+        if(ret == -1 && can_allocate_ident) {
+            create_ident(node->value.str);
+            return load_ident(fd, res, node->value.str);
+        }
+        return ret;
         break;
     case EXPRESSION_T:
         return translate_expression(fd, node, res, can_allocate_ident);
@@ -228,6 +309,11 @@ int parse_function_call(FILE *fd, struct ast_node *node, storage_t res) {
     }
     pop_oper(fd, lr);
     add_oper_backend(fd, res, ret, zero);
+    struct function_definition_t *function = find_in_function_definition_t_list_by_str(functions, node->value.function_call.function_name->value.str);
+    if(function == NULL) {
+        return -1;
+    }
+    set_storage_type(res, function->return_value_type);
     pop_oper(fd, ret);
     return 0;
 }
@@ -319,7 +405,8 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
     for(struct ast_node *param = node->value.function.params; param != NULL; param = param->value.ast_list_element.next) {
         add_function_param(param->value.ast_list_element.node->value.ident_description.ident->value.str,
             (arg_counter<ABI_REGS_COUNT)?(r1+arg_counter):(zero),
-            (arg_counter<ABI_REGS_COUNT)?(-1-arg_counter):(arg_counter-ABI_REGS_COUNT+1));
+            (arg_counter<ABI_REGS_COUNT)?(-1-arg_counter):(arg_counter-ABI_REGS_COUNT+1),
+            ast_type_to_mal(*param->value.ast_list_element.node->value.ident_description.type));
         arg_counter++;
     }
     allocate_stack_label(fd, stack_size_label);
@@ -330,6 +417,14 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
     free_stack(fd);
     jalr_oper_backend(fd, zero, lr, 0);
     fprintf(fd, "%s:\ndata %d*1\n", stack_size_label, (int32_t)(size_space())*WORD_SIZE);
+    for(struct static_ident_t_list_t *ident = static_idents; ident != NULL; ident = (struct static_ident_t_list_t *)ident->next) {
+        fprintf(fd, "%s:\n", ident->value.label);
+        for(size_t i = 0; i<ident->value.len; i++) {
+            fprintf(fd, "data %d*1\n", (int)ident->value.contain[i]);
+        }
+    }
+    free_static_ident_t_list(static_idents);
+    static_idents = NULL;
     pop_space();
     free(stack_size_label);
     pop_label_level();
@@ -348,12 +443,26 @@ int parse_function_def_list(FILE *fd, struct ast_node *node) {
     switch(node->type) {
     case AST_LIST_ELEMENT_T:
         for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
+            add_function_definition_t(&functions,
+                (struct function_definition_t){
+                    .name = cur->value.ast_list_element.node->value.function.function_name->value.str,
+                    .return_value_type = ast_type_to_mal(*cur->value.ast_list_element.node->value.function.type)
+                }
+            );
+        }
+        for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
             if(parse_function_def(fd, cur->value.ast_list_element.node) == -1) {
                 return -1;
             }
         }
         break;
     case FUNCTION_T:
+        add_function_definition_t(&functions,
+            (struct function_definition_t){
+                .name = node->value.function.function_name->value.str,
+                .return_value_type = ast_type_to_mal(*node->value.function.type)
+            }
+        );
         return parse_function_def(fd, node);
         break;
     default:
