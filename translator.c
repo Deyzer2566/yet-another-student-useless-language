@@ -228,7 +228,7 @@ int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_al
         return parse_function_call(fd, node, res);
         break;
     default:
-        fprintf(stderr, "not implemented operation!");
+        fprintf(stderr, "not implemented operation! %d", node->type);
         return -1;
         break;
     }
@@ -236,37 +236,53 @@ int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_al
 }
 
 int parse_loop(FILE *fd, struct ast_node *node) {
+    struct {
+        struct ast_node *limit;
+        struct ast_node *stmts;
+    } loop;
     switch (node->type) {
     case FOR_T:
-        if(parse_expression(fd, node->value.for_loop.init, zero, true) == -1) {
-            return -1;
-        }
-        inc_label_branch_count();
-        char *loop_start = get_label_with_counter();
-        inc_label_branch_count();
-        char *loop_end = get_label_with_counter();
-        storage_t res = get_storage(fd);
-        fprintf(fd, "%s:\n", loop_start);
-        if(parse_expression(fd, node->value.for_loop.limit, res, false) == -1) {
-            return -1;
-        }
-        beq_oper_backend_label(fd, res, zero, loop_end);
-        if(parse_statement_list(fd, node->value.for_loop.stmt) == -1) {
-            return -1;
-        }
-        if(parse_expression(fd, node->value.for_loop.step, zero, false) == -1) {
-            return -1;
-        }
-        jal_oper_backend_label(fd, zero, loop_start);
-        fprintf(fd, "%s:\n", loop_end);
-        free_storage(fd, res);
-        free(loop_start);
-        free(loop_end);
+        loop.limit = node->value.for_loop.limit;
+        loop.stmts = node->value.for_loop.stmt;
+        break;
+    case WHILE_T:
+        loop.limit = node->value.while_loop.expression;
+        loop.stmts = node->value.while_loop.stmt;
         break;
     default:
         fprintf(stderr, "unimplemented loop");
+        return -1;
         break;
     }
+    if(node->type == FOR_T) {
+        if(parse_expression(fd, node->value.for_loop.init, zero, true) == -1) {
+            return -1;
+        }
+    }
+    inc_label_branch_count();
+    char *loop_start = get_label_with_counter();
+    inc_label_branch_count();
+    char *loop_end = get_label_with_counter();
+    storage_t res = get_storage(fd);
+    fprintf(fd, "%s:\n", loop_start);
+    if(parse_expression(fd, loop.limit, res, false) == -1) {
+        return -1;
+    }
+    beq_oper_backend_label(fd, res, zero, loop_end);
+    if(parse_statement_list(fd, loop.stmts) == -1) {
+        return -1;
+    }
+    if(node->type == FOR_T) {
+        if(parse_expression(fd, node->value.for_loop.step, zero, false) == -1) {
+            return -1;
+        }
+    }
+    jal_oper_backend_label(fd, zero, loop_start);
+    fprintf(fd, "%s:\n", loop_end);
+    free_storage(fd, res);
+    free(loop_start);
+    free(loop_end);
+    return 0;
 }
 
 struct label_waterfall_list_t {
