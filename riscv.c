@@ -65,6 +65,33 @@ void ebreak_oper_backend(FILE *fd) {
 void seq_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
     fprintf(fd, "seq "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
 }
+void sne_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "sne "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
 void mul_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
     fprintf(fd, "mul "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void sra_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "sra "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void sll_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "sll "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void and_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "and "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void or_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "or "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void slt_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "slt "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void sge_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "sge "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void xor_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "xor "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}
+void xori_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, sword_t imm) {
+    fprintf(fd, "xori "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, %d\n", dest, src1, imm);
 }

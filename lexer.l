@@ -43,7 +43,7 @@
 "while"                 return WHILE;
 "for"                   return FOR;
 "return"                return RETURN;
-[a-zA-Z_][a-zA-Z0-9]*   { char *str = malloc(strlen(yytext)+1); strcpy(str, yytext); yylval.node = new_node(IDENT_T, (union value_t){.str = str}); return IDENT; }
+[a-zA-Z_][a-zA-Z_0-9]*   { char *str = malloc(strlen(yytext)+1); strcpy(str, yytext); yylval.node = new_node(IDENT_T, (union value_t){.str = str}); return IDENT; }
 "="                     return ASSIGN;
 ","                     return PARAM_DELIMITER;
 \"                      { yylval.str = malloc(1); yylval.str[0] = 0; BEGIN(STR); }
@@ -59,4 +59,6 @@
 <MULTILINE_COMMENT>\*[^\/]
 <MULTILINE_COMMENT>\*\/ BEGIN(INITIAL);
 \/\/[^\n]*
+"<<"                    return LSH;
+">>"                    return RSH;
 %%

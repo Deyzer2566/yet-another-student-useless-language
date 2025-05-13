@@ -60,6 +60,8 @@ struct idents_with_typename_list_t {
 
 %token MOD
 
+%token LSH RSH
+
 %%
 
 root:
@@ -118,6 +120,8 @@ term
     | term XOR factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = XOR_OP, .left = $<node>1, .right = $<node>3 }}); }
     | term MOD factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = MOD_OP, .left = $<node>1, .right = $<node>3 }}); }
 	| factor
+    | term LSH factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = LSH_OP, .left = $<node>1, .right = $<node>3 }}); }
+    | term RSH factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = RSH_OP, .left = $<node>1, .right = $<node>3 }}); }
 	;
 
 factor

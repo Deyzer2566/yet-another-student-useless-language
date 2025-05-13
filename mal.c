@@ -229,6 +229,11 @@ void add_function_param(char *name, storage_t mapped_register, offset_t offset_r
     idents->ident.mapped_reg = mapped_register;
     idents->ident.addr.offset = offset_rel_fp;
     idents->ident.type = type;
+    if(mapped_register != zero) {
+        idents->ident.map = ON_REGISTER;
+    } else {
+        idents->ident.map = ON_STACK;
+    }
 }
 
 void allocate_stack(FILE *fd, unsigned int word_count) {

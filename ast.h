@@ -42,7 +42,9 @@ struct expression_t {
         XOR_OP,
         NEQ_OP,
         MOD_OP,
-        DEREF_POINTER_OP
+        DEREF_POINTER_OP,
+        LSH_OP,
+        RSH_OP
     } operation;
     struct ast_node *left;
     struct ast_node *right;

@@ -53,29 +53,10 @@ make_add(static_ident_t, struct static_ident_t);
 make_free(static_ident_t, struct static_ident_t);
 struct static_ident_t_list_t *static_idents = NULL;
 
-int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool can_allocate_ident) {
-    storage_t src1, src2;
-    allocate_storage(dest);
-    src1 = get_storage(fd);
-    if(parse_expression(fd, node->value.expression.left, src1, (node->value.expression.operation != NEGATION_OP && node->value.expression.operation != DEREF_POINTER_OP) && can_allocate_ident) == -1)
-        return -1;
-    if(node->value.expression.operation != NEGATION_OP && node->value.expression.operation != DEREF_POINTER_OP) {
-        allocate_storage(dest);
-        allocate_storage(src1);
-        src2 = get_storage(fd);
-        if(parse_expression(fd, node->value.expression.right, src2, false) == -1) {
-            return -1;
-        }
-    }
+int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, storage_t src1, storage_t src2) {
     switch(node->value.expression.operation) {
         case PLUS_OP:
             add_oper_backend(fd, dest, src1, src2);
-            break;
-        case ASSIGN_OP:
-            addi_oper_backend(fd, src1, src2, 0);
-            set_storage_type(src1, get_storage_type(src2));
-            update_ident(fd, src1, node->value.expression.left->value.str);
-            addi_oper_backend(fd, dest, src1, 0);
             break;
         case MINUS_OP:
             sub_oper_backend(fd, dest, src1, src2);
@@ -86,22 +67,182 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
         case MULTIPLICATION_OP:
             mul_oper_backend(fd, dest, src1, src2);
             break;
-        case DEREF_POINTER_OP:
-            load_oper_backend(fd, dest, src1, 0);
+        case LSH_OP:
+            sll_oper_backend(fd, dest, src1, src2);
+            break;
+        case RSH_OP:
+            sra_oper_backend(fd, dest, src1, src2);
+            break;
+        case BITWISE_AND_OP:
+            and_oper_backend(fd, dest, src1, src2);
+            break;
+        case BITWISE_OR_OP:
+            or_oper_backend(fd, dest, src1, src2);
+            break;
+        case SMALLER_OP:
+            slt_oper_backend(fd, dest, src1, src2);
+            break;
+        case LARGER_OR_EQ_OP:
+            sge_oper_backend(fd, dest, src1, src2);
+            break;
+        case LARGER_OP:
+            push_oper(fd, src1);
+            sge_oper_backend(fd, dest, src1, src2);
+            push_oper(fd, dest);
+            sne_oper_backend(fd, dest, src1, src2);
+            pop_oper(fd, src1);
+            and_oper_backend(fd, dest, src1, dest);
+            pop_oper(fd, src1);
+            break;
+        case NEGATION_OP:
+            sub_oper_backend(fd, dest, zero, src1);
+            break;
+        case LOGICAL_NOT_OP:
+            sne_oper_backend(fd, dest, src1, zero);
+            xori_oper_backend(fd, dest, dest, (sword_t)1);
+            break;
+        default:
+            fprintf(stderr,"not implemented expression %d", node->value.expression.operation);
+            return -1;
+            break;
+    }
+    return 0;
+}
+
+int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, storage_t src1, storage_t src2) {
+    switch(node->value.expression.operation) {
+        case PLUS_OP:
+            push_oper(fd, ret);
+            push_oper(fd, lr);
+            if(dest != r1)
+                push_oper(fd, r1);
+            if(dest != r2)
+                push_oper(fd, r2);
+            add_oper_backend(fd, r1, src1, zero);
+            add_oper_backend(fd, r2, src2, zero);
+            jal_oper_backend_label(fd, lr, "__real_sum");
+            add_oper_backend(fd, dest, ret, zero);
+            if(dest != r2)
+                pop_oper(fd, r2);
+            if(dest != r1)
+                pop_oper(fd, r1);
+            pop_oper(fd, lr);
+            pop_oper(fd, ret);
+            break;
+        case NEGATION_OP:
+            allocate_storage(dest);
+            allocate_storage(src1);
+            storage_t temp = get_storage(fd);
+            li_oper_backend(fd, temp, 1<<31);
+            xor_oper_backend(fd, dest, src1, temp);
+            free_storage(fd, temp);
+            break;
+        case MINUS_OP:
+            push_oper(fd, ret);
+            push_oper(fd, lr);
+            if(dest != r1)
+                push_oper(fd, r1);
+            if(dest != r2)
+                push_oper(fd, r2);
+            add_oper_backend(fd, r1, src1, zero);
+            add_oper_backend(fd, r2, src2, zero);
+            jal_oper_backend_label(fd, lr, "__real_sub");
+            add_oper_backend(fd, dest, ret, zero);
+            if(dest != r2)
+                pop_oper(fd, r2);
+            if(dest != r1)
+                pop_oper(fd, r1);
+            pop_oper(fd, lr);
+            pop_oper(fd, ret);
             break;
         default:
             fprintf(stderr,"not implemented expression");
             return -1;
             break;
     }
-    if(node->value.expression.operation != DEREF_POINTER_OP) {
-        set_storage_type(dest, get_storage_type(src1));
-    }
-    else {
-        set_storage_type(dest, INTEGER);
-    }
-    if(node->value.expression.operation != NEGATION_OP && node->value.expression.operation != DEREF_POINTER_OP) {
+    return 0;
+}
+
+int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool can_allocate_ident) {
+    storage_t src1, src2;
+    allocate_storage(dest);
+    src1 = get_storage(fd);
+    bool isSingleOperandOperation = \
+        node->value.expression.operation == NEGATION_OP || \
+        node->value.expression.operation == DEREF_POINTER_OP || \
+        node->value.expression.operation == LOGICAL_NOT_OP;
+    if(parse_expression(fd, node->value.expression.left, src1, !isSingleOperandOperation && can_allocate_ident) == -1)
+        return -1;
+    if(!isSingleOperandOperation) {
+        allocate_storage(dest);
+        allocate_storage(src1);
+        src2 = get_storage(fd);
+        if(parse_expression(fd, node->value.expression.right, src2, false) == -1) {
+            return -1;
+        }
+        switch(node->value.expression.operation) {
+        case ASSIGN_OP:
+            addi_oper_backend(fd, src1, src2, 0);
+            set_storage_type(src1, get_storage_type(src2));
+            update_ident(fd, src1, node->value.expression.left->value.str);
+            addi_oper_backend(fd, dest, src1, 0);
+            break;
+        default:
+            if(get_storage_type(src1) != get_storage_type(src2)) {
+                fprintf(stderr, "different types of operands");
+                return -1;
+            } else {
+                switch(get_storage_type(src2)) {
+                case INTEGER:
+                    if(translate_int_operation(fd, node, dest, src1, src2) == -1) {
+                        return -1;
+                    }
+                    break;
+                case REAL:
+                    if(translate_real_operation(fd, node, dest, src1, src2) == -1) {
+                        return -1;
+                    }
+                    break;
+                default:
+                    fprintf(fd, "invalid type for expression");
+                    return -1;
+                    break;
+                }
+            }
+        }
         free_storage(fd, src2);
+        set_storage_type(dest, get_storage_type(src1));
+    } else {
+        switch(node->value.expression.operation) {
+        case DEREF_POINTER_OP:
+            load_oper_backend(fd, dest, src1, 0);
+            set_storage_type(dest, INTEGER);
+            break;
+        case LOGICAL_NOT_OP:
+        case NEGATION_OP:
+            switch(get_storage_type(src1)) {
+            case INTEGER:
+                if(translate_int_operation(fd, node, dest, src1, dummy) == -1) {
+                    return -1;
+                }
+                break;
+            case REAL:
+                if(translate_real_operation(fd, node, dest, src1, dummy) == -1) {
+                    return -1;
+                }
+                break;
+            default:
+                fprintf(fd, "invalid type for expression");
+                return -1;
+                break;
+            }
+            set_storage_type(dest, get_storage_type(src1));
+            break;
+        default:
+            fprintf(stderr, "unsupported single operand operation");
+            return -1;
+            break;
+        }
     }
     free_storage(fd, src1);
 }
@@ -328,15 +469,15 @@ int itoa(int num, char *buff, int radix) {
     char local_buff[26];
     int pointer = 0;
     do {
-        if(num%radix > 0 && num%radix < 10)
-            local_buff[25-pointer] = num % radix+'0';
+        if(num%radix >= 0 && num%radix < 10)
+            local_buff[pointer] = num % radix+'0';
         else
-            local_buff[25-pointer] = num % radix+'a';
+            local_buff[pointer] = num % radix+'a';
         pointer++;
         num /= radix;
-    } while(num / radix > 0);
+    } while(num > 0);
     for(int i = 0;i<pointer;i++) {
-        buff[i] = local_buff[25-i];
+        buff[i] = local_buff[pointer-i-1];
     }
     buff[pointer] = 0;
     return pointer;
@@ -536,7 +677,7 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
     for(struct ast_node *param = node->value.function.params; param != NULL; param = param->value.ast_list_element.next) {
         add_function_param(param->value.ast_list_element.node->value.ident_description.ident->value.str,
             (arg_counter<ABI_REGS_COUNT)?(r1+arg_counter):(zero),
-            (arg_counter<ABI_REGS_COUNT)?(-1-arg_counter):(arg_counter-ABI_REGS_COUNT+1),
+            (arg_counter<ABI_REGS_COUNT)?(-1-(int)arg_counter):(arg_counter-ABI_REGS_COUNT+1),
             ast_type_to_mal(*param->value.ast_list_element.node->value.ident_description.type));
         arg_counter++;
     }
