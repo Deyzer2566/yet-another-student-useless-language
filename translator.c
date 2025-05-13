@@ -39,11 +39,12 @@ struct function_definition_t {
 make_list(function_definition_t, struct function_definition_t);
 make_find_by_str(struct function_definition_t, function_definition_t, name);
 make_add(function_definition_t, struct function_definition_t);
+make_free(function_definition_t, struct function_definition_t);
 struct function_definition_t_list_t *functions = NULL;
 
 struct static_ident_t {
     char *label;
-    uint8_t *contain;
+    uint32_t *contain;
     size_t len;
     enum ident_type_t type;
 };
@@ -114,6 +115,81 @@ uword_t real_to_word(float f) {
     return converter.i;
 }
 
+// 0xxxxxxx — если для кодирования потребуется один октет;
+// 110xxxxx — если для кодирования потребуется два октета;
+// 1110xxxx — если для кодирования потребуется три октета;
+// 11110xxx — если для кодирования потребуется четыре октета;
+// 10xxxxxx — продолжение символа.
+uint32_t *utf8_to_unicode(uint8_t *utf8) {
+    int byte_counter = 0;
+    int must_be_bytes = 0;
+    size_t len = 0;
+    for(uint8_t *cur = utf8; (*cur) != '\0'; cur++) {
+        if((*cur & 0xf8) == 0xf0 && byte_counter == 0) {
+            must_be_bytes = 4;
+            byte_counter = 1;
+        } else if((*cur & 0xC0) == 0x80 && byte_counter < must_be_bytes && byte_counter != 0) {
+            byte_counter++;
+            if(byte_counter == must_be_bytes) {
+                byte_counter = must_be_bytes = 0;
+            }
+            len++;
+        } else if((*cur & 0xF0) == 0xE0 && byte_counter == 0) {
+            must_be_bytes = 3;
+            byte_counter = 1;
+        } else if((*cur & 0xE0) == 0xC0 && byte_counter == 0) {
+            must_be_bytes = 2;
+            byte_counter = 1;
+        } else if((*cur & 0x80) == 0 && byte_counter == 0) {
+            len++;
+        } else {
+            return NULL;
+        }
+    }
+    uint32_t cur_char = 0;
+    size_t cur_char_counter = 0;
+    uint32_t *unicode = malloc(sizeof(uint32_t)*len+1);
+    unicode[len] = 0;
+    for(uint8_t *cur = utf8; (*cur) != '\0'; cur++) {
+        if((*cur & 0xf8) == 0xf0 && byte_counter == 0) {
+            must_be_bytes = 4;
+            cur_char = (*cur & 0x7);
+            byte_counter = 1;
+        } else if((*cur & 0xC0) == 0x80 && byte_counter < must_be_bytes && byte_counter != 0) {
+            cur_char <<= 6;
+            cur_char |= *cur & 0x3f;
+            byte_counter++;
+            if(byte_counter == must_be_bytes) {
+                byte_counter = must_be_bytes = 0;
+                unicode[cur_char_counter++] = cur_char;
+            }
+        } else if((*cur & 0xF0) == 0xE0 && byte_counter == 0) {
+            must_be_bytes = 3;
+            cur_char = (*cur & 0xf);
+            byte_counter = 1;
+        } else if((*cur & 0xE0) == 0xC0 && byte_counter == 0) {
+            must_be_bytes = 2;
+            cur_char = (*cur & 0x1f);
+            byte_counter = 1;
+        } else if((*cur & 0x80) == 0 && byte_counter == 0) {
+            cur_char = *cur;
+            unicode[cur_char_counter++] = cur_char;
+        } else {
+            free(unicode);
+            return NULL;
+        }
+    }
+    return unicode;
+}
+
+size_t unicode_len(uint32_t *unicode) {
+    size_t len = 0;
+    if(unicode == NULL)
+        return (size_t)0;
+    for(;unicode[len]!=0;len++);
+    return len;
+}
+
 int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_allocate_ident) {
     switch(node->type) {
     case INTEGER_T:
@@ -127,9 +203,10 @@ int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_al
     case STRING_T:
         inc_label_branch_count();
         char *label = get_label_with_counter();
+        uint32_t *unicode= utf8_to_unicode(node->value.str);
         add_static_ident_t(&static_idents, (struct static_ident_t){
-            .contain = node->value.str,
-            .len = strlen(node->value.str)+1,
+            .contain = unicode,
+            .len = unicode_len(unicode)+1,
             .type = POINTER,
             .label = label
         });
@@ -159,7 +236,37 @@ int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_al
 }
 
 int parse_loop(FILE *fd, struct ast_node *node) {
-    return -1;
+    switch (node->type) {
+    case FOR_T:
+        if(parse_expression(fd, node->value.for_loop.init, zero, true) == -1) {
+            return -1;
+        }
+        inc_label_branch_count();
+        char *loop_start = get_label_with_counter();
+        inc_label_branch_count();
+        char *loop_end = get_label_with_counter();
+        storage_t res = get_storage(fd);
+        fprintf(fd, "%s:\n", loop_start);
+        if(parse_expression(fd, node->value.for_loop.limit, res, false) == -1) {
+            return -1;
+        }
+        beq_oper_backend_label(fd, res, zero, loop_end);
+        if(parse_statement_list(fd, node->value.for_loop.stmt) == -1) {
+            return -1;
+        }
+        if(parse_expression(fd, node->value.for_loop.step, zero, false) == -1) {
+            return -1;
+        }
+        jal_oper_backend_label(fd, zero, loop_start);
+        fprintf(fd, "%s:\n", loop_end);
+        free_storage(fd, res);
+        free(loop_start);
+        free(loop_end);
+        break;
+    default:
+        fprintf(stderr, "unimplemented loop");
+        break;
+    }
 }
 
 struct label_waterfall_list_t {
@@ -430,6 +537,7 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
         for(size_t i = 0; i<ident->value.len; i++) {
             fprintf(fd, "data %d*1\n", (int)ident->value.contain[i]);
         }
+        free(ident->value.contain);
     }
     free_static_ident_t_list(static_idents);
     static_idents = NULL;
@@ -448,6 +556,24 @@ int parse_function_def_list(FILE *fd, struct ast_node *node) {
 
     jal_oper_backend_label(fd, lr, "main");
     ebreak_oper_backend(fd);
+    
+    fprintf(fd, "print:\newrite x1\njalr x0, x%d, 0\n", lr);
+    fprintf(fd, "exit:\nebreak\n");
+    
+    add_function_definition_t(&functions,
+        (struct function_definition_t){
+            .name = "print",
+            .return_value_type = INTEGER
+        }
+    );
+
+    add_function_definition_t(&functions,
+        (struct function_definition_t){
+            .name = "exit",
+            .return_value_type = INTEGER
+        }
+    );
+
     switch(node->type) {
     case AST_LIST_ELEMENT_T:
         for(struct ast_node *cur = node; cur != NULL; cur = cur->value.ast_list_element.next) {
@@ -478,8 +604,7 @@ int parse_function_def_list(FILE *fd, struct ast_node *node) {
         return -1;
         break;
     }
-    fprintf(fd, "print:\newrite x1\njalr x0, x%d, 0\n", lr);
-    fprintf(fd, "exit:\nebreak\n");
+    free_function_definition_t_list(functions);
     return 0;
 }
 
