@@ -133,6 +133,7 @@ factor
     | STRING
     | REAL
     | function_call
+    | deref_pointer
 	;
 
 typename
@@ -197,6 +198,10 @@ function_definition_list
 
 return
     : RETURN assign_or_expr { $<node>$ = new_node(RETURN_T, (union value_t){.return_ = {.return_value = $<node>2}}); }
+    ;
+
+deref_pointer
+    : MUL factor { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = DEREF_POINTER_OP, .left = $<node>2, .right = NULL}}); }
     ;
 
 %%

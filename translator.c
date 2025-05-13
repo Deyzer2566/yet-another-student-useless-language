@@ -56,9 +56,9 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
     storage_t src1, src2;
     allocate_storage(dest);
     src1 = get_storage(fd);
-    if(parse_expression(fd, node->value.expression.left, src1, node->value.expression.operation != NEGATION_OP && can_allocate_ident) == -1)
+    if(parse_expression(fd, node->value.expression.left, src1, (node->value.expression.operation != NEGATION_OP && node->value.expression.operation != DEREF_POINTER_OP) && can_allocate_ident) == -1)
         return -1;
-    if(node->value.expression.operation != NEGATION_OP) {
+    if(node->value.expression.operation != NEGATION_OP && node->value.expression.operation != DEREF_POINTER_OP) {
         allocate_storage(dest);
         allocate_storage(src1);
         src2 = get_storage(fd);
@@ -69,7 +69,6 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
     switch(node->value.expression.operation) {
         case PLUS_OP:
             add_oper_backend(fd, dest, src1, src2);
-            set_storage_type(dest, src2);
             break;
         case ASSIGN_OP:
             addi_oper_backend(fd, src1, src2, 0);
@@ -86,12 +85,21 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
         case MULTIPLICATION_OP:
             mul_oper_backend(fd, dest, src1, src2);
             break;
+        case DEREF_POINTER_OP:
+            load_oper_backend(fd, dest, src1, 0);
+            break;
         default:
             fprintf(stderr,"not implemented expression");
             return -1;
             break;
     }
-    if(node->value.expression.operation != NEGATION_OP) {
+    if(node->value.expression.operation != DEREF_POINTER_OP) {
+        set_storage_type(dest, get_storage_type(src1));
+    }
+    else {
+        set_storage_type(dest, INTEGER);
+    }
+    if(node->value.expression.operation != NEGATION_OP && node->value.expression.operation != DEREF_POINTER_OP) {
         free_storage(fd, src2);
     }
     free_storage(fd, src1);

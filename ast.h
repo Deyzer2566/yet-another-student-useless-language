@@ -41,7 +41,8 @@ struct expression_t {
         NEGATION_OP,
         XOR_OP,
         NEQ_OP,
-        MOD_OP
+        MOD_OP,
+        DEREF_POINTER_OP
     } operation;
     struct ast_node *left;
     struct ast_node *right;
