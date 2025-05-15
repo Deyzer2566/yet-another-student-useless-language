@@ -95,3 +95,6 @@ void xor_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum
 void xori_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, sword_t imm) {
     fprintf(fd, "xori "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, %d\n", dest, src1, imm);
 }
+void div_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "div "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}

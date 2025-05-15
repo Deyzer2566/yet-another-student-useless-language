@@ -8,8 +8,8 @@ int abs(int a) {
 int __real_sum(int a1, int a2) {
     mantisa1 = a1 & ((1<<23)-1) | (1<<23);
     mantisa2 = a2 & ((1<<23)-1) | (1<<23);
-    pow1 = (a1 >> 23) & ((1<<8)-1);
-    pow2 = (a2 >> 23) & ((1<<8)-1);
+    pow1 = (a1 >> 23) & ((1<<8)-1) - 127;
+    pow2 = (a2 >> 23) & ((1<<8)-1) - 127;
     sign1 = (a1 >> 31) & 1;
     sign2 = (a2 >> 31) & 1;
     pow = 0;
@@ -37,13 +37,15 @@ int __real_sum(int a1, int a2) {
         pow = pow-1;
         mantisa = mantisa << 1;
     }
+    pow = pow + 127;
     return (sign << 31) | (pow << 23) | mantisa&8388607;
 }
+
 int __real_sub(int a1, int a2) {
     mantisa1 = a1 & ((1<<23)-1) | (1<<23);
     mantisa2 = a2 & ((1<<23)-1) | (1<<23);
-    pow1 = (a1 >> 23) & ((1<<8)-1);
-    pow2 = (a2 >> 23) & ((1<<8)-1);
+    pow1 = (a1 >> 23) & ((1<<8)-1) - 127;
+    pow2 = (a2 >> 23) & ((1<<8)-1) - 127;
     sign1 = (a1 >> 31) & 1;
     sign2 = (a2 >> 31) & 1;
     pow = 0;
@@ -71,5 +73,10 @@ int __real_sub(int a1, int a2) {
         pow = pow-1;
         mantisa = mantisa << 1;
     }
+    pow = pow + 127;
     return (sign << 31) | (pow << 23) | mantisa&8388607;
+}
+
+int __real_negation(int a) {
+    return a ^ (1<<31);
 }

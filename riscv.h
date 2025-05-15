@@ -52,3 +52,4 @@ void slt_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum
 void sge_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2);
 void xor_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2);
 void xori_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, sword_t imm);
+void div_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2);

@@ -185,7 +185,7 @@ void create_ident(char *name) {
     new_ident->ident.mapped_reg = zero;
     new_ident->next = (struct list_header_t *)idents;
     new_ident->ident.memory_mapping_type = ON_STACK;
-    if(idents != NULL)
+    if(idents != NULL && idents->ident.addr.offset < 0)
         new_ident->ident.addr.offset = idents->ident.addr.offset-1;
     else 
         new_ident->ident.addr.offset = -1;

@@ -101,6 +101,12 @@ int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, sto
             sne_oper_backend(fd, dest, src1, zero);
             xori_oper_backend(fd, dest, dest, (sword_t)1);
             break;
+        case DIVISION_OP:
+            div_oper_backend(fd, dest, src1, src2);
+            break;
+        case XOR_OP:
+            xor_oper_backend(fd, dest, src1, src2);
+            break;
         default:
             fprintf(stderr,"not implemented expression %d", node->value.expression.operation);
             return -1;
@@ -110,56 +116,36 @@ int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, sto
 }
 
 int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, storage_t src1, storage_t src2) {
+    push_oper(fd, ret);
+    push_oper(fd, lr);
+    if(dest != r1)
+        push_oper(fd, r1);
+    if(dest != r2)
+        push_oper(fd, r2);
+    add_oper_backend(fd, r1, src1, zero);
+    add_oper_backend(fd, r2, src2, zero);
     switch(node->value.expression.operation) {
         case PLUS_OP:
-            push_oper(fd, ret);
-            push_oper(fd, lr);
-            if(dest != r1)
-                push_oper(fd, r1);
-            if(dest != r2)
-                push_oper(fd, r2);
-            add_oper_backend(fd, r1, src1, zero);
-            add_oper_backend(fd, r2, src2, zero);
             jal_oper_backend_label(fd, lr, "__real_sum");
-            add_oper_backend(fd, dest, ret, zero);
-            if(dest != r2)
-                pop_oper(fd, r2);
-            if(dest != r1)
-                pop_oper(fd, r1);
-            pop_oper(fd, lr);
-            pop_oper(fd, ret);
             break;
         case NEGATION_OP:
-            allocate_storage(dest);
-            allocate_storage(src1);
-            storage_t temp = get_storage(fd);
-            li_oper_backend(fd, temp, 1<<31);
-            xor_oper_backend(fd, dest, src1, temp);
-            free_storage(fd, temp);
+            jal_oper_backend_label(fd, lr, "__real_negation");
             break;
         case MINUS_OP:
-            push_oper(fd, ret);
-            push_oper(fd, lr);
-            if(dest != r1)
-                push_oper(fd, r1);
-            if(dest != r2)
-                push_oper(fd, r2);
-            add_oper_backend(fd, r1, src1, zero);
-            add_oper_backend(fd, r2, src2, zero);
             jal_oper_backend_label(fd, lr, "__real_sub");
-            add_oper_backend(fd, dest, ret, zero);
-            if(dest != r2)
-                pop_oper(fd, r2);
-            if(dest != r1)
-                pop_oper(fd, r1);
-            pop_oper(fd, lr);
-            pop_oper(fd, ret);
             break;
         default:
             fprintf(stderr,"not implemented expression");
             return -1;
             break;
     }
+    add_oper_backend(fd, dest, ret, zero);
+    if(dest != r2)
+        pop_oper(fd, r2);
+    if(dest != r1)
+        pop_oper(fd, r1);
+    pop_oper(fd, lr);
+    pop_oper(fd, ret);
     return 0;
 }
 
@@ -677,7 +663,7 @@ int parse_function_def(FILE *fd, struct ast_node *node) {
     for(struct ast_node *param = node->value.function.params; param != NULL; param = param->value.ast_list_element.next) {
         add_function_param(param->value.ast_list_element.node->value.ident_description.ident->value.str,
             (arg_counter<ABI_REGS_COUNT)?(r1+arg_counter):(zero),
-            (arg_counter<ABI_REGS_COUNT)?(-1-(int)arg_counter):(arg_counter-ABI_REGS_COUNT+1),
+            ((arg_counter<ABI_REGS_COUNT)?(-1-(int)arg_counter):(arg_counter-ABI_REGS_COUNT+1))*WORD_SIZE,
             ast_type_to_mal(*param->value.ast_list_element.node->value.ident_description.type));
         arg_counter++;
     }
