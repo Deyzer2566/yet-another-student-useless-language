@@ -98,3 +98,6 @@ void xori_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, swo
 void div_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
     fprintf(fd, "div "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
 }
+void rem_oper_backend(FILE *fd, enum register_t dest, enum register_t src1, enum register_t src2) {
+    fprintf(fd, "rem "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d, "REGISTER_PREFIX"%d\n", dest, src1, src2);
+}

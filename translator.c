@@ -107,6 +107,9 @@ int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, sto
         case XOR_OP:
             xor_oper_backend(fd, dest, src1, src2);
             break;
+        case MOD_OP:
+            rem_oper_backend(fd, dest, src1, src2);
+            break;
         default:
             fprintf(stderr,"not implemented expression %d", node->value.expression.operation);
             return -1;
@@ -118,12 +121,12 @@ int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, sto
 int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, storage_t src1, storage_t src2) {
     push_oper(fd, ret);
     push_oper(fd, lr);
-    if(dest != r1)
-        push_oper(fd, r1);
-    if(dest != r2)
-        push_oper(fd, r2);
-    add_oper_backend(fd, r1, src1, zero);
-    add_oper_backend(fd, r2, src2, zero);
+    push_oper(fd, r1);
+    push_oper(fd, r2);
+    push_oper(fd, src1);
+    push_oper(fd, src2);
+    load_oper_backend(fd, r2, sp, 0);
+    load_oper_backend(fd, r1, sp, WORD_SIZE);
     switch(node->value.expression.operation) {
         case PLUS_OP:
             jal_oper_backend_label(fd, lr, "__real_sum");
@@ -139,12 +142,12 @@ int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, st
             return -1;
             break;
     }
-    add_oper_backend(fd, dest, ret, zero);
-    if(dest != r2)
-        pop_oper(fd, r2);
-    if(dest != r1)
-        pop_oper(fd, r1);
+    pop_oper(fd, src2);
+    pop_oper(fd, src1);
+    pop_oper(fd, r2);
+    pop_oper(fd, r1);
     pop_oper(fd, lr);
+    add_oper_backend(fd, dest, ret, zero);
     pop_oper(fd, ret);
     return 0;
 }
@@ -537,7 +540,7 @@ int min(int a, int b) {
 int parse_function_call(FILE *fd, struct ast_node *node, storage_t res) {
     push_oper(fd, ret);
     push_oper(fd, lr);
-    size_t arg_count = 0;
+    int arg_count = 0;
     for(struct ast_node *arg = node->value.function_call.param; arg != NULL; arg = arg->value.ast_list_element.next) {
         arg_count ++;
     }

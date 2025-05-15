@@ -185,10 +185,14 @@ void create_ident(char *name) {
     new_ident->ident.mapped_reg = zero;
     new_ident->next = (struct list_header_t *)idents;
     new_ident->ident.memory_mapping_type = ON_STACK;
-    if(idents != NULL && idents->ident.addr.offset < 0)
-        new_ident->ident.addr.offset = idents->ident.addr.offset-1;
-    else 
-        new_ident->ident.addr.offset = -1;
+    new_ident->ident.addr.offset = -1;
+    if(idents != NULL) {
+        for(struct ident_list_t *ident = idents; ident != NULL && !ident->border; ident = (struct ident_list_t *)ident->next) {
+            if(new_ident->ident.addr.offset > ident->ident.addr.offset) {
+                new_ident->ident.addr.offset = ident->ident.addr.offset - 1;
+            }
+        }
+    }
     new_ident->ident.type = UNKNOWN;
     idents = new_ident;
 }
@@ -232,7 +236,7 @@ void add_function_param(char *name, storage_t mapped_register, offset_t offset_r
     if(mapped_register != zero) {
         idents->ident.map = ON_REGISTER;
     } else {
-        idents->ident.map = ON_STACK;
+        idents->ident.map = IN_MEMORY;
     }
 }
 
