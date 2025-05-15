@@ -29,6 +29,9 @@ int __real_sum(int a1, int a2) {
     mantisa = mantisa1 + mantisa2;
     sign = mantisa < 0;
     mantisa = abs(mantisa);
+    if(mantisa == 0) {
+        return 0;
+    }
     while(mantisa >= (1<<24)) {
         pow = pow+1;
         mantisa = mantisa >> 1;
@@ -65,6 +68,9 @@ int __real_sub(int a1, int a2) {
     mantisa = mantisa1 - mantisa2;
     sign = mantisa < 0;
     mantisa = abs(mantisa);
+    if(mantisa == 0) {
+        return 0;
+    }
     while(mantisa >= (1<<24)) {
         pow = pow+1;
         mantisa = mantisa >> 1;
