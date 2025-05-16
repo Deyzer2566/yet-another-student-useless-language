@@ -110,6 +110,27 @@ int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, sto
         case MOD_OP:
             rem_oper_backend(fd, dest, src1, src2);
             break;
+        case NEQ_OP:
+            sne_oper_backend(fd, dest, src1, src2);
+            break;
+        case LOGICAL_AND_OP:
+            push_oper(fd, src1);
+            push_oper(fd, src2);
+            sne_oper_backend(fd, src1, src1, zero);
+            sne_oper_backend(fd, src2, src2, zero);
+            and_oper_backend(fd, dest, src1, src2);
+            pop_oper(fd, src2);
+            pop_oper(fd, src1);
+            break;
+        case LOGICAL_OR_OP:
+            push_oper(fd, src1);
+            push_oper(fd, src2);
+            sne_oper_backend(fd, src1, src1, zero);
+            sne_oper_backend(fd, src2, src2, zero);
+            or_oper_backend(fd, dest, src1, src2);
+            pop_oper(fd, src2);
+            pop_oper(fd, src1);
+            break;
         default:
             fprintf(stderr,"not implemented expression %d", node->value.expression.operation);
             return -1;
@@ -136,6 +157,9 @@ int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, st
             break;
         case MINUS_OP:
             jal_oper_backend_label(fd, lr, "__real_sub");
+            break;
+        case MULTIPLICATION_OP:
+            jal_oper_backend_label(fd, lr, "__real_mul");
             break;
         default:
             fprintf(stderr,"not implemented expression");
