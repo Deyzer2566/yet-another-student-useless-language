@@ -122,3 +122,45 @@ int __real_mul(int a1, int a2) {
     }
     return (sign << 31) | (pow << 23) | (mantisa&((1<<23)-1));
 }
+
+int __long_div(int a1, int a2) {
+    r = 0;
+    for(i = 0,i<31,i=i+1) {
+        r = r << 1;
+        if(a1 > a2) {
+            a1 = a1 - a2;
+            r = r | 1;
+        }
+        a1 = a1 << 1;
+    }
+    return r;
+}
+
+int __real_div(int a1, int a2) {
+    mantisa1 = a1 & ((1<<23)-1);
+    mantisa2 = a2 & ((1<<23)-1);
+    pow1 = ((a1 >> 23) & ((1<<8)-1)) - 127;
+    pow2 = ((a2 >> 23) & ((1<<8)-1)) - 127;
+    sign1 = (a1 >> 31) & 1;
+    sign2 = (a2 >> 31) & 1;
+    if((mantisa1==0) && (pow1==0)) {
+        return (sign1^sign2)<<31;
+    }
+    if((pow1 == ((1<<8)-1)) || (pow2 == ((1<<8)-1)) || ((mantisa2 == 0) && (pow2 == 0))) {
+        return ((sign1^sign2)<<31) | ((1<<31)-1);
+    }
+    mantisa1 = mantisa1 | (1<<23);
+    mantisa2 = mantisa2 | (1<<23);
+    mantisa = __long_div(mantisa1, mantisa2)>>(31-24);
+    pow = pow1-pow2+127;
+    sign = sign1 ^ sign2;
+    while(mantisa >= (1<<24)) {
+        mantisa = mantisa >> 1;
+        pow = pow + 1;
+    }
+    while(!(mantisa & (1<<23))) {
+        mantisa = mantisa << 1;
+        pow = pow - 1;
+    }
+    return (sign << 31) | (pow << 23) | (mantisa&((1<<23)-1));
+}

@@ -161,6 +161,9 @@ int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, st
         case MULTIPLICATION_OP:
             jal_oper_backend_label(fd, lr, "__real_mul");
             break;
+        case DIVISION_OP:
+            jal_oper_backend_label(fd, lr, "__real_div");
+            break;
         default:
             fprintf(stderr,"not implemented expression");
             return -1;
