@@ -188,7 +188,7 @@ void create_ident(char *name) {
     new_ident->ident.addr.offset = -1;
     if(idents != NULL) {
         for(struct ident_list_t *ident = idents; ident != NULL && !ident->border; ident = (struct ident_list_t *)ident->next) {
-            if(new_ident->ident.addr.offset > ident->ident.addr.offset) {
+            if(new_ident->ident.addr.offset >= ident->ident.addr.offset) {
                 new_ident->ident.addr.offset = ident->ident.addr.offset - 1;
             }
         }

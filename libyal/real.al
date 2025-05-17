@@ -164,3 +164,39 @@ int __real_div(int a1, int a2) {
     }
     return (sign << 31) | (pow << 23) | (mantisa&((1<<23)-1));
 }
+
+int __real_eq(int a1, int a2) {
+    return a1 == a2;
+}
+
+int __real_neq(int a1, int a2) {
+    return a1 != a2;
+}
+
+int __real_smaller(int a1, int a2) {
+    mantisa1 = a1 & ((1<<23)-1);
+    mantisa2 = a2 & ((1<<23)-1);
+    pow1 = ((a1 >> 23) & ((1<<8)-1)) - 127;
+    pow2 = ((a2 >> 23) & ((1<<8)-1)) - 127;
+    sign1 = (a1 >> 31) & 1;
+    sign2 = (a2 >> 31) & 1;
+    return (sign1 > sign2) || ((sign1 == sign2) && (pow1 < pow2)) || ((sign1 == sign2) && (pow1==pow2) && (mantisa1<mantisa2));
+}
+
+int __real_smaller_or_eq(int a1, int a2) {
+    return __real_smaller(a1,a2) || __real_eq(a1, a2);
+}
+
+int __real_larger(int a1, int a2) {
+    mantisa1 = a1 & ((1<<23)-1);
+    mantisa2 = a2 & ((1<<23)-1);
+    pow1 = ((a1 >> 23) & ((1<<8)-1)) - 127;
+    pow2 = ((a2 >> 23) & ((1<<8)-1)) - 127;
+    sign1 = (a1 >> 31) & 1;
+    sign2 = (a2 >> 31) & 1;
+    return (sign1 < sign2) || ((sign1 == sign2) && (pow1 > pow2)) || ((sign1==sign2) && (pow1==pow2) && (mantisa1>mantisa2));
+}
+
+int __real_larger_or_eq(int a1, int a2) {
+    return __real_larger(a1, a2) || __real_eq(a1, a2);
+}

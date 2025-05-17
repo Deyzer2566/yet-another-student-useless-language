@@ -94,6 +94,15 @@ int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, sto
             and_oper_backend(fd, dest, src1, dest);
             pop_oper(fd, src1);
             break;
+        case SMALLER_OR_EQ_OP:
+            push_oper(fd, src1);
+            slt_oper_backend(fd, dest, src1, src2);
+            push_oper(fd, dest);
+            seq_oper_backend(fd, dest, src1, src2);
+            pop_oper(fd, src1);
+            or_oper_backend(fd, dest, src1, dest);
+            pop_oper(fd, src1);
+            break;
         case NEGATION_OP:
             sub_oper_backend(fd, dest, zero, src1);
             break;
@@ -148,6 +157,7 @@ int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, st
     push_oper(fd, src2);
     load_oper_backend(fd, r2, sp, 0);
     load_oper_backend(fd, r1, sp, WORD_SIZE);
+    enum ident_type_t dest_type = UNKNOWN;
     switch(node->value.expression.operation) {
         case PLUS_OP:
             jal_oper_backend_label(fd, lr, "__real_sum");
@@ -164,6 +174,30 @@ int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, st
         case DIVISION_OP:
             jal_oper_backend_label(fd, lr, "__real_div");
             break;
+        case EQ_OP:
+            jal_oper_backend_label(fd, lr, "__real_eq");
+            dest_type = INTEGER;
+            break;
+        case NEQ_OP:
+            jal_oper_backend_label(fd, lr, "__real_neq");
+            dest_type = INTEGER;
+            break;
+        case SMALLER_OP:
+            jal_oper_backend_label(fd, lr, "__real_smaller");
+            dest_type = INTEGER;
+            break;
+        case SMALLER_OR_EQ_OP:
+            jal_oper_backend_label(fd, lr, "__real_smaller_or_eq");
+            dest_type = INTEGER;
+            break;
+        case LARGER_OP:
+            jal_oper_backend_label(fd, lr, "__real_larger");
+            dest_type = INTEGER;
+            break;
+        case LARGER_OR_EQ_OP:
+            jal_oper_backend_label(fd, lr, "__real_larger_or_eq");
+            dest_type = INTEGER;
+            break;
         default:
             fprintf(stderr,"not implemented expression");
             return -1;
@@ -175,12 +209,14 @@ int translate_real_operation(FILE *fd, struct ast_node *node, storage_t dest, st
     pop_oper(fd, r1);
     pop_oper(fd, lr);
     add_oper_backend(fd, dest, ret, zero);
+    set_storage_type(dest, dest_type);
     pop_oper(fd, ret);
     return 0;
 }
 
 int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool can_allocate_ident) {
     storage_t src1, src2;
+    set_storage_type(dest, UNKNOWN);
     allocate_storage(dest);
     src1 = get_storage(fd);
     bool isSingleOperandOperation = \
@@ -227,7 +263,9 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
             }
         }
         free_storage(fd, src2);
-        set_storage_type(dest, get_storage_type(src1));
+        if(get_storage_type(dest) == UNKNOWN) {
+            set_storage_type(dest, get_storage_type(src1));
+        }
     } else {
         switch(node->value.expression.operation) {
         case DEREF_POINTER_OP:
@@ -252,7 +290,9 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
                 return -1;
                 break;
             }
-            set_storage_type(dest, get_storage_type(src1));
+            if(get_storage_type(dest) == UNKNOWN) {
+                set_storage_type(dest, get_storage_type(src1));
+            }
             break;
         default:
             fprintf(stderr, "unsupported single operand operation");
@@ -574,7 +614,9 @@ int parse_function_call(FILE *fd, struct ast_node *node, storage_t res) {
     struct ast_node *cur_param = node->value.function_call.param;
     for(int i = 0;i < min(arg_count, ABI_REGS_COUNT); i++) {
         get_specific_storage(fd, r1+i);
-        parse_expression(fd, cur_param->value.ast_list_element.node, r1+i, false);
+        if(parse_expression(fd, cur_param->value.ast_list_element.node, r1+i, false) == -1) {
+            return -1;
+        }
         cur_param = cur_param->value.ast_list_element.next;
     }
     if(arg_count > ABI_REGS_COUNT) {
@@ -582,7 +624,9 @@ int parse_function_call(FILE *fd, struct ast_node *node, storage_t res) {
         add_oper_backend(fd, ret, sp, zero);
         for(int i = ABI_REGS_COUNT; i < arg_count; i++) {
             storage_t temp = get_storage(fd);
-            parse_expression(fd, cur_param->value.ast_list_element.node, temp, false);
+            if(parse_expression(fd, cur_param->value.ast_list_element.node, temp, false) == -1) {
+                return -1;
+            }
             save_oper_backend(fd, temp, ret, i-ABI_REGS_COUNT);
             free_storage(fd, temp);
             cur_param = cur_param->value.ast_list_element.next;
