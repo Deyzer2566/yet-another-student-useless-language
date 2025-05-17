@@ -181,8 +181,12 @@ extern struct ast_node *root;
   
 int main()
 {
-    yyparse();
-    // draw_ast_tree(root, 1);
-    printf("%d", translate(stdout, root));
-    free_node(root);
+    if(yyparse() == 0) {
+        FILE *fd = fopen("out.s", "w");
+        if(translate(fd, root) == -1) {
+            fflush(stderr);
+            printf("couldn't compile file!\n");
+        }
+        free_node(root);
+    }
 }
