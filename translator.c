@@ -234,18 +234,27 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
         }
         switch(node->value.expression.operation) {
         case ASSIGN_OP:
-            addi_oper_backend(fd, src1, src2, 0);
-            set_storage_type(src1, get_storage_type(src2));
-            update_ident(fd, src1, node->value.expression.left->value.str);
+            if(node->value.expression.left->type == IDENT_T) {
+                addi_oper_backend(fd, src1, src2, 0);
+                set_storage_type(src1, get_storage_type(src2));
+                update_ident(fd, src1, node->value.expression.left->value.str);
+                set_storage_type(dest, get_storage_type(src1));
+            } else {
+                save_oper_backend(fd, src2, src1, 0);
+                set_storage_type(src1, get_storage_type(src2));
+            }
             addi_oper_backend(fd, dest, src1, 0);
             break;
         default:
-            if(get_storage_type(src1) != get_storage_type(src2)) {
+            if((get_storage_type(src1) != get_storage_type(src2)) &&
+                ((get_storage_type(src1) != POINTER || get_storage_type(src2) != INTEGER) &&
+                (get_storage_type(src1) != INTEGER || get_storage_type(src2) != POINTER))) {
                 fprintf(stderr, "different types of operands");
                 return -1;
             } else {
                 switch(get_storage_type(src2)) {
                 case INTEGER:
+                case POINTER:
                     if(translate_int_operation(fd, node, dest, src1, src2) == -1) {
                         return -1;
                     }

@@ -241,31 +241,32 @@ void add_function_param(char *name, storage_t mapped_register, offset_t offset_r
 }
 
 void allocate_stack(FILE *fd, unsigned int word_count) {
-    storage_t temp = r1;
-    push_oper(fd, temp);
+    push_oper(fd, r1);
 
-    li_oper_backend(fd, temp, word_count);
-    sub_oper_backend(fd, sp, sp, temp);
-    add_oper_backend(fd, temp, sp, temp);
-    load_oper_backend(fd, temp, sp, WORD_SIZE);
-}
-
-void allocate_stack_label(FILE *fd, char *stack_size_label) {
     push_oper(fd, fp);
     add_oper_backend(fd, fp, sp, zero);
 
-    storage_t temp = r1;
-    push_oper(fd, temp);
+    li_oper_backend(fd, r1, word_count);
+    sub_oper_backend(fd, sp, sp, r1);
+    load_oper_backend(fd, r1, fp, WORD_SIZE);
+}
 
-    li_oper_backend_label(fd, temp, stack_size_label);
-    load_oper_backend(fd, temp, temp, 0);
-    sub_oper_backend(fd, sp, sp, temp);
-    load_oper_backend(fd, temp, fp, -WORD_SIZE);
+void allocate_stack_label(FILE *fd, char *stack_size_label) {
+    push_oper(fd, r1);
+
+    push_oper(fd, fp);
+    add_oper_backend(fd, fp, sp, zero);
+
+    li_oper_backend_label(fd, r1, stack_size_label);
+    load_oper_backend(fd, r1, r1, 0);
+    sub_oper_backend(fd, sp, sp, r1);
+    load_oper_backend(fd, r1, fp, WORD_SIZE);
 }
 
 void free_stack(FILE *fd) {
     add_oper_backend(fd, sp, fp, zero);
     pop_oper(fd, fp);
+    pop_oper(fd, r1);
 }
 
 enum ident_type_t storage_types[STORAGE_COUNT] = {UNKNOWN};

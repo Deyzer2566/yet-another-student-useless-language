@@ -91,6 +91,7 @@ unsplitable_stmt
 assign_or_expr
     : IDENT ASSIGN assign_or_expr { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = ASSIGN_OP, .left = $<node>1, .right = $<node>3 }}); }
     | expr
+    | deref_pointer ASSIGN assign_or_expr { $<node>$ = new_node(EXPRESSION_T, (union value_t){.expression = (struct expression_t){.operation = ASSIGN_OP, .left = $<node>1->value.expression.left, .right = $<node>3 }}); free($<node>1);}
     ;
 
 
