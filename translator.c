@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <string.h>
+#include <limits.h>
 
 int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_allocate_ident);
 int parse_statement_list(FILE *fd, struct ast_node *node);
@@ -78,6 +79,14 @@ int translate_int_operation(FILE *fd, struct ast_node *node, storage_t dest, sto
             break;
         case BITWISE_OR_OP:
             or_oper_backend(fd, dest, src1, src2);
+            break;
+        case BITWISE_NOT_OP:
+            allocate_storage(dest);
+            allocate_storage(src1);
+            storage_t temp = get_storage(fd);
+            li_oper_backend(fd, temp, UINT_MAX);
+            xor_oper_backend(fd, dest, src1, temp);
+            free_storage(fd, temp);
             break;
         case SMALLER_OP:
             slt_oper_backend(fd, dest, src1, src2);
@@ -222,7 +231,8 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
     bool isSingleOperandOperation = \
         node->value.expression.operation == NEGATION_OP || \
         node->value.expression.operation == DEREF_POINTER_OP || \
-        node->value.expression.operation == LOGICAL_NOT_OP;
+        node->value.expression.operation == LOGICAL_NOT_OP || \
+        node->value.expression.operation == BITWISE_NOT_OP;
     if(parse_expression(fd, node->value.expression.left, src1, !isSingleOperandOperation && can_allocate_ident) == -1)
         return -1;
     if(!isSingleOperandOperation) {
@@ -283,6 +293,7 @@ int translate_expression(FILE *fd, struct ast_node *node, storage_t dest, bool c
             break;
         case LOGICAL_NOT_OP:
         case NEGATION_OP:
+        case BITWISE_NOT_OP:
             switch(get_storage_type(src1)) {
             case INTEGER:
                 if(translate_int_operation(fd, node, dest, src1, dummy) == -1) {
