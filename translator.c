@@ -396,6 +396,63 @@ size_t unicode_len(uint32_t *unicode) {
     return len;
 }
 
+int parse_cast(FILE *fd, struct ast_node *node, storage_t res) {
+    if(parse_expression(fd, node->value.cast.fact, res, false) == -1) {
+        return -1;
+    }
+    switch(*node->value.cast.cast_type) {
+    case INTEGER_T:
+        switch(get_storage_type(res)) {
+        case INTEGER:
+            break;
+        case REAL:
+            push_oper(fd, ret);
+            push_oper(fd, lr);
+            push_oper(fd, r1);
+            add_oper_backend(fd, r1, res, zero);
+            jal_oper_backend_label(fd, lr, "__real_to_int");
+            pop_oper(fd, r1);
+            pop_oper(fd, lr);
+            add_oper_backend(fd, res, ret, zero);
+            push_oper(fd, ret);
+            set_storage_type(res, INTEGER);
+            break;
+        default:
+            fprintf(stderr, "unexpected cast");
+            return -1;
+            break;
+        }
+        break;
+    case REAL_T:
+        switch(get_storage_type(res)) {
+        case INTEGER:
+            push_oper(fd, ret);
+            push_oper(fd, lr);
+            push_oper(fd, r1);
+            add_oper_backend(fd, r1, res, zero);
+            jal_oper_backend_label(fd, lr, "__int_to_real");
+            pop_oper(fd, r1);
+            pop_oper(fd, lr);
+            add_oper_backend(fd, res, ret, zero);
+            push_oper(fd, ret);
+            set_storage_type(res, REAL);
+            break;
+        case REAL:
+            break;
+        default:
+            fprintf(stderr, "unexpected cast");
+            return -1;
+            break;
+        }
+        break;
+    default:
+        fprintf(stderr, "unexcepted target cast");
+        return -1;
+        break;
+    }
+    return 0;
+}
+
 int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_allocate_ident) {
     switch(node->type) {
     case INTEGER_T:
@@ -432,6 +489,9 @@ int parse_expression(FILE *fd, struct ast_node *node, storage_t res, bool can_al
         break;
     case FUNCTION_CALL_T:
         return parse_function_call(fd, node, res);
+        break;
+    case CAST_T:
+        return parse_cast(fd, node, res);
         break;
     default:
         fprintf(stderr, "not implemented operation! %d", node->type);
